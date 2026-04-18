@@ -1,12 +1,12 @@
+'use client'
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Coins } from 'lucide-react'
 import { FormattedNumber } from '@/components/FormattedNumber'
 import { useAtom } from 'jotai'
 import { useTranslations } from 'next-intl'
 import { settingsAtom } from '@/lib/atoms'
-import dynamic from 'next/dynamic'
-
-const TodayEarnedCoins = dynamic(() => import('./TodayEarnedCoins'), { ssr: false })
+import TodayEarnedCoins from './TodayEarnedCoins'
 
 export default function CoinBalance({ coinBalance }: { coinBalance: number }) {
   const t = useTranslations('CoinBalance');
@@ -17,21 +17,20 @@ export default function CoinBalance({ coinBalance }: { coinBalance: number }) {
         <CardTitle>{t('coinBalanceTitle')}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center justify-center">
-          <Coins className="h-12 w-12 text-yellow-400 mr-4" />
-          <div className="flex flex-col">
-            <div className="flex flex-col">
-              <span className="text-4xl font-bold">
-                <FormattedNumber amount={coinBalance} settings={settings} />
-              </span>
-              <div className="flex items-center gap-1">
-                <TodayEarnedCoins longFormat={true} />
-              </div>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted">
+              <Coins className="h-5 w-5" />
             </div>
+            <div className="text-3xl font-semibold">
+              <FormattedNumber amount={coinBalance} settings={settings} />
+            </div>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            <TodayEarnedCoins longFormat={true} />
           </div>
         </div>
       </CardContent>
     </Card>
   )
 }
-

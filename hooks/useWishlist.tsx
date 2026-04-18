@@ -1,50 +1,19 @@
 import { useAtom } from 'jotai'
 import { useTranslations } from 'next-intl'
-import { wishlistAtom, coinsAtom, currentUserAtom } from '@/lib/atoms'
+import { wishlistAtom, coinsAtom } from '@/lib/atoms'
 import { saveWishlistItems, removeCoins } from '@/app/actions/data'
 import { toast } from '@/hooks/use-toast'
-import { WishlistItemType, User, SafeUser } from '@/lib/types'
+import { WishlistItemType } from '@/lib/types'
 import { celebrations } from '@/utils/celebrations'
-import { checkPermission } from '@/lib/utils'
 import { useCoins } from './useCoins'
-
-function handlePermissionCheck(
-  user: User | SafeUser | undefined,
-  resource: 'habit' | 'wishlist' | 'coins',
-  action: 'write' | 'interact',
-  tCommon: (key: string, values?: Record<string, any>) => string
-): boolean {
-  if (!user) {
-    toast({
-      title: tCommon("authenticationRequiredTitle"),
-      description: tCommon("authenticationRequiredDescription"),
-      variant: "destructive",
-    })
-    return false
-  }
-  
-  if (!user.isAdmin && !checkPermission(user.permissions, resource, action)) {
-    toast({
-      title: tCommon("permissionDeniedTitle"),
-      description: tCommon("permissionDeniedDescription", { action, resource }),
-      variant: "destructive",
-    })
-    return false
-  }
-  
-  return true
-}
 
 export function useWishlist() {
   const t = useTranslations('useWishlist');
-  const tCommon = useTranslations('Common');
-  const [user] = useAtom(currentUserAtom)
   const [wishlist, setWishlist] = useAtom(wishlistAtom)
   const [coins, setCoins] = useAtom(coinsAtom)
   const { balance } = useCoins()
 
   const addWishlistItem = async (item: Omit<WishlistItemType, 'id'>) => {
-    if (!handlePermissionCheck(user, 'wishlist', 'write', tCommon)) return
     const newItem = { ...item, id: Date.now().toString() }
     const newItems = [...wishlist.items, newItem]
     const newWishListData = { items: newItems }
@@ -53,7 +22,6 @@ export function useWishlist() {
   }
 
   const editWishlistItem = async (updatedItem: WishlistItemType) => {
-    if (!handlePermissionCheck(user, 'wishlist', 'write', tCommon)) return
     const newItems = wishlist.items.map(item =>
       item.id === updatedItem.id ? updatedItem : item
     )
@@ -63,7 +31,6 @@ export function useWishlist() {
   }
 
   const deleteWishlistItem = async (id: string) => {
-    if (!handlePermissionCheck(user, 'wishlist', 'write', tCommon)) return
     const newItems = wishlist.items.filter(item => item.id !== id)
     const newWishListData = { items: newItems }
     setWishlist(newWishListData)
@@ -71,7 +38,6 @@ export function useWishlist() {
   }
 
   const redeemWishlistItem = async (item: WishlistItemType) => {
-    if (!handlePermissionCheck(user, 'wishlist', 'interact', tCommon)) return false
     if (balance >= item.coinCost) {
       // Check if item has target completions and if we've reached the limit
       if (item.targetCompletions && item.targetCompletions <= 0) {
@@ -142,7 +108,6 @@ export function useWishlist() {
   const canRedeem = (cost: number) => balance >= cost
 
   const archiveWishlistItem = async (id: string) => {
-    if (!handlePermissionCheck(user, 'wishlist', 'write', tCommon)) return
     const newItems = wishlist.items.map(item =>
       item.id === id ? { ...item, archived: true } : item
     )
@@ -152,7 +117,6 @@ export function useWishlist() {
   }
 
   const unarchiveWishlistItem = async (id: string) => {
-    if (!handlePermissionCheck(user, 'wishlist', 'write', tCommon)) return
     const newItems = wishlist.items.map(item =>
       item.id === id ? { ...item, archived: false } : item
     )

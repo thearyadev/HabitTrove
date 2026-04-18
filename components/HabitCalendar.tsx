@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from 'react'
 import { Calendar } from '@/components/ui/calendar'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import CompletionCountBadge from '@/components/CompletionCountBadge'
 import { Circle, CircleCheck } from 'lucide-react'
 import { d2s, getNow, isHabitDue, getISODate, getCompletionsForDate } from '@/lib/utils'
@@ -13,6 +13,112 @@ import { habitsAtom, settingsAtom, completedHabitsMapAtom, hasTasksAtom } from '
 import { DateTime } from 'luxon'
 import Linkify from './linkify'
 import { Habit } from '@/lib/types'
+import { Button } from './ui/button'
+import { Separator } from './ui/separator'
+
+function CompletionButton({
+  habit,
+  completions,
+  isCompleted,
+  onComplete,
+}: {
+  habit: Habit
+  completions: number
+  isCompleted: boolean
+  onComplete: () => void
+}) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={onComplete}
+      disabled={isCompleted}
+      className="h-8 w-8 rounded-md"
+      aria-label={`Complete ${habit.name}`}
+    >
+      {isCompleted ? (
+        <CircleCheck className="h-4 w-4 text-emerald-600" />
+      ) : (
+        <div className="relative h-4 w-4">
+          <Circle className="absolute h-4 w-4 text-muted-foreground" />
+          <div
+            className="absolute h-4 w-4 rounded-full overflow-hidden text-foreground"
+            style={{
+              background: `conic-gradient(
+                currentColor ${(completions / (habit.targetCompletions ?? 1)) * 360}deg,
+                transparent ${(completions / (habit.targetCompletions ?? 1)) * 360}deg 360deg
+              )`,
+              mask: 'radial-gradient(transparent 50%, black 51%)',
+              WebkitMask: 'radial-gradient(transparent 50%, black 51%)',
+            }}
+          />
+        </div>
+      )}
+    </Button>
+  )
+}
+
+function HabitListSection({
+  title,
+  badgeType,
+  date,
+  items,
+  timezone,
+  selectedDateTime,
+  onComplete,
+}: {
+  title: string
+  badgeType: 'tasks' | 'habits'
+  date: string
+  items: Habit[]
+  timezone: string
+  selectedDateTime: DateTime
+  onComplete: (habit: Habit) => void
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-medium text-foreground">{title}</h3>
+        <CompletionCountBadge type={badgeType} date={date} />
+      </div>
+      {items.length === 0 ? (
+        <div className="rounded-md border border-dashed px-3 py-6 text-sm text-muted-foreground">
+          Nothing scheduled for this date.
+        </div>
+      ) : (
+        <div className="rounded-lg border">
+          <ul className="divide-y">
+            {items.map((habit) => {
+              const completions = getCompletionsForDate({ habit, date: selectedDateTime, timezone })
+              const isCompleted = completions >= (habit.targetCompletions || 1)
+
+              return (
+                <li key={habit.id} className="flex items-center justify-between gap-3 px-3 py-3">
+                  <div className="min-w-0 space-y-1">
+                    <div className="text-sm font-medium">
+                      <Linkify>{habit.name}</Linkify>
+                    </div>
+                    {habit.targetCompletions ? (
+                      <p className="text-xs text-muted-foreground">
+                        {completions}/{habit.targetCompletions} completions
+                      </p>
+                    ) : null}
+                  </div>
+                  <CompletionButton
+                    habit={habit}
+                    completions={completions}
+                    isCompleted={isCompleted}
+                    onComplete={() => onComplete(habit)}
+                  />
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function HabitCalendar() {
   const t = useTranslations('HabitCalendar')
@@ -33,8 +139,17 @@ export default function HabitCalendar() {
   const habits = habitsData.habits
 
   const [completedHabitsMap] = useAtom(completedHabitsMapAtom)
+  const tasks = habits.filter(habit => habit.isTask && isHabitDue({
+    habit,
+    timezone: settings.system.timezone,
+    date: selectedDateTime,
+  }))
+  const dueHabits = habits.filter(habit => !habit.isTask && isHabitDue({
+    habit,
+    timezone: settings.system.timezone,
+    date: selectedDateTime,
+  }))
 
-  // Get completed dates for calendar modifiers
   const completedDates = useMemo(() => {
     return new Set(Array.from(completedHabitsMap.keys()).map(date =>
       getISODate({ dateTime: DateTime.fromISO(date), timezone: settings.system.timezone })
@@ -42,12 +157,19 @@ export default function HabitCalendar() {
   }, [completedHabitsMap, settings.system.timezone])
 
   return (
-    <div>
-      <h1 className="text-xl xs:text-3xl font-semibold mb-6">{t('title')}</h1>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+    <div className="space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold">{t('title')}</h1>
+        <p className="text-sm text-muted-foreground">
+          Review completions by date and backfill missed check-ins.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+        <Card className="self-start">
           <CardHeader>
             <CardTitle>{t('calendarCardTitle')}</CardTitle>
+            <CardDescription>Select a date to review tasks and habits.</CardDescription>
           </CardHeader>
           <CardContent>
             <Calendar
@@ -65,12 +187,13 @@ export default function HabitCalendar() {
                 )
               }}
               modifiersClassNames={{
-                completed: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 font-medium rounded-md',
+                completed: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200',
               }}
             />
           </CardContent>
         </Card>
-        <Card>
+
+        <Card className="self-start">
           <CardHeader>
             <CardTitle>
               {selectedDateTime ? (
@@ -79,128 +202,36 @@ export default function HabitCalendar() {
                 t('selectDatePrompt')
               )}
             </CardTitle>
+            <CardDescription>
+              Mark completions directly from the selected day.
+            </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="max-h-[520px] overflow-y-auto">
             {selectedDateTime && (
-              <div className="space-y-8">
+              <div className="space-y-5">
                 {hasTasks && (
-                  <div className="pt-2 border-t">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">{t('tasksSectionTitle')}</h3>
-                      <CompletionCountBadge type="tasks" date={selectedDate.toString()} />
-                    </div>
-                    <ul className="space-y-3">
-                      {habits
-                        .filter(habit => habit.isTask && isHabitDue({
-                          habit,
-                          timezone: settings.system.timezone,
-                          date: selectedDateTime
-                        }))
-                        .map((habit) => {
-                          const completions = getCompletionsForDate({ habit, date: selectedDateTime, timezone: settings.system.timezone })
-                          const isCompleted = completions >= (habit.targetCompletions || 1)
-                          return (
-                            <li key={habit.id} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg hover:bg-muted/50 transition-colors">
-                              <span className="flex items-center gap-2">
-                                <Linkify>{habit.name}</Linkify>
-                              </span>
-                              <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-2">
-                                  {habit.targetCompletions && (
-                                    <span className="text-sm text-muted-foreground">
-                                      {completions}/{habit.targetCompletions}
-                                    </span>
-                                  )}
-                                  <button
-                                    onClick={() => handleCompletePastHabit(habit, selectedDateTime)}
-                                    disabled={isCompleted}
-                                    className="relative h-4 w-4 hover:opacity-70 transition-opacity disabled:opacity-100"
-                                  >
-                                    {isCompleted ? (
-                                      <CircleCheck className="h-4 w-4 text-green-500" />
-                                    ) : (
-                                      <div className="relative h-4 w-4">
-                                        <Circle className="absolute h-4 w-4 text-muted-foreground" />
-                                        <div
-                                          className="absolute h-4 w-4 rounded-full overflow-hidden"
-                                          style={{
-                                            background: `conic-gradient(
-                                              currentColor ${(completions / (habit.targetCompletions ?? 1)) * 360}deg,
-                                              transparent ${(completions / (habit.targetCompletions ?? 1)) * 360}deg 360deg
-                                            )`,
-                                            mask: 'radial-gradient(transparent 50%, black 51%)',
-                                            WebkitMask: 'radial-gradient(transparent 50%, black 51%)'
-                                          }}
-                                        />
-                                      </div>
-                                    )}
-                                  </button>
-                                </div>
-                              </div>
-                            </li>
-                          )
-                        })}
-                    </ul>
-                  </div>
+                  <>
+                    <HabitListSection
+                      title={t('tasksSectionTitle')}
+                      badgeType="tasks"
+                      date={selectedDate.toString()}
+                      items={tasks}
+                      timezone={settings.system.timezone}
+                      selectedDateTime={selectedDateTime}
+                      onComplete={(habit) => handleCompletePastHabit(habit, selectedDateTime)}
+                    />
+                    <Separator />
+                  </>
                 )}
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">{t('habitsSectionTitle')}</h3>
-                    <CompletionCountBadge type="habits" date={selectedDate.toString()} />
-                  </div>
-                  <ul className="space-y-3">
-                    {habits
-                      .filter(habit => !habit.isTask && isHabitDue({
-                        habit,
-                        timezone: settings.system.timezone,
-                        date: selectedDateTime
-                      }))
-                      .map((habit) => {
-                        const completions = getCompletionsForDate({ habit, date: selectedDateTime, timezone: settings.system.timezone })
-                        const isCompleted = completions >= (habit.targetCompletions || 1)
-                        return (
-                          <li key={habit.id} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg hover:bg-muted/50 transition-colors">
-                            <span className="flex items-center gap-2">
-                              <Linkify>{habit.name}</Linkify>
-                            </span>
-                            <div className="flex items-center gap-2">
-                              <div className="flex items-center gap-2">
-                                {habit.targetCompletions && (
-                                  <span className="text-sm text-muted-foreground">
-                                    {completions}/{habit.targetCompletions}
-                                  </span>
-                                )}
-                                <button
-                                  onClick={() => handleCompletePastHabit(habit, selectedDateTime)}
-                                  disabled={isCompleted}
-                                  className="relative h-4 w-4 hover:opacity-70 transition-opacity disabled:opacity-100"
-                                >
-                                  {isCompleted ? (
-                                    <CircleCheck className="h-4 w-4 text-green-500" />
-                                  ) : (
-                                    <div className="relative h-4 w-4">
-                                      <Circle className="absolute h-4 w-4 text-muted-foreground" />
-                                      <div
-                                        className="absolute h-4 w-4 rounded-full overflow-hidden"
-                                        style={{
-                                          background: `conic-gradient(
-                                        currentColor ${(completions / (habit.targetCompletions ?? 1)) * 360}deg,
-                                        transparent ${(completions / (habit.targetCompletions ?? 1)) * 360}deg 360deg
-                                      )`,
-                                          mask: 'radial-gradient(transparent 50%, black 51%)',
-                                          WebkitMask: 'radial-gradient(transparent 50%, black 51%)'
-                                        }}
-                                      />
-                                    </div>
-                                  )}
-                                </button>
-                              </div>
-                            </div>
-                          </li>
-                        )
-                      })}
-                  </ul>
-                </div>
+                <HabitListSection
+                  title={t('habitsSectionTitle')}
+                  badgeType="habits"
+                  date={selectedDate.toString()}
+                  items={dueHabits}
+                  timezone={settings.system.timezone}
+                  selectedDateTime={selectedDateTime}
+                  onComplete={(habit) => handleCompletePastHabit(habit, selectedDateTime)}
+                />
               </div>
             )}
           </CardContent>
@@ -209,4 +240,3 @@ export default function HabitCalendar() {
     </div>
   )
 }
-

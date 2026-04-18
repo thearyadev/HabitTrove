@@ -1,6 +1,6 @@
-import { Habit, User } from '@/lib/types'
+import { Habit } from '@/lib/types'
 import { useAtom } from 'jotai'
-import { settingsAtom, pomodoroAtom, browserSettingsAtom, usersAtom, currentUserAtom } from '@/lib/atoms'
+import { settingsAtom, pomodoroAtom, browserSettingsAtom } from '@/lib/atoms'
 import { getCompletionsForToday, isTaskOverdue, convertMachineReadableFrequencyToHumanReadable } from '@/lib/utils'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -13,8 +13,6 @@ import {
 import { useEffect, useState } from 'react'
 import { useHabits } from '@/hooks/useHabits'
 import { useTranslations } from 'next-intl'
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
-import { hasPermission } from '@/lib/utils'
 import { HabitContextMenuItems } from './HabitContextMenuItems'
 import DrawingDisplay from './DrawingDisplay'
 
@@ -23,26 +21,6 @@ interface HabitItemProps {
   onEdit: () => void
   onDelete: () => void
 }
-
-const renderUserAvatars = (habit: Habit, currentUser: User | null, usersData: { users: User[] }) => {
-  if (!habit.userIds || habit.userIds.length <= 1) return null;
-
-  return (
-    <div className="flex -space-x-2 ml-2 flex-shrink-0">
-      {habit.userIds?.filter((u) => u !== currentUser?.id).map(userId => {
-        const user = usersData.users.find(u => u.id === userId)
-        if (!user) return null
-        return (
-          <Avatar key={user.id} className="h-6 w-6">
-            <AvatarImage src={user?.avatarPath && `/api/avatars/${user.avatarPath.split('/').pop()}` || ""} />
-            <AvatarFallback>{user.username[0]}</AvatarFallback>
-          </Avatar>
-        )
-      })}
-    </div>
-  );
-};
-
 
 export default function HabitItem({ habit, onEdit, onDelete }: HabitItemProps) {
   const { completeHabit, undoComplete, archiveHabit, unarchiveHabit, saveHabit } = useHabits()
@@ -53,10 +31,8 @@ export default function HabitItem({ habit, onEdit, onDelete }: HabitItemProps) {
   const isCompletedToday = completionsToday >= target
   const [isHighlighted, setIsHighlighted] = useState(false)
   const t = useTranslations('HabitItem');
-  const [usersData] = useAtom(usersAtom)
-  const [currentUser] = useAtom(currentUserAtom)
-  const canWrite = hasPermission(currentUser, 'habit', 'write')
-  const canInteract = hasPermission(currentUser, 'habit', 'interact')
+  const canWrite = true
+  const canInteract = true
   const [browserSettings] = useAtom(browserSettingsAtom)
   const isTasksView = browserSettings.viewType === 'tasks'
   const isRecurRule = !isTasksView
@@ -100,7 +76,6 @@ export default function HabitItem({ habit, onEdit, onDelete }: HabitItemProps) {
               </span>
             )}
           </CardTitle>
-          {renderUserAvatars(habit, currentUser as User, usersData)}
         </div>
         {(habit.description || habit.drawing) && (
           <div className={`flex gap-4 mt-2 ${!habit.description ? 'justify-end' : ''}`}>

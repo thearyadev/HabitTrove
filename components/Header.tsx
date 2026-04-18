@@ -9,18 +9,15 @@ interface HeaderProps {
 
 export default function Header({ className }: HeaderProps) {
   return (
-    <>
-      <header className={`border-b bg-white dark:bg-gray-800 shadow-sm ${className || ''}`}>
-        <div className="mx-auto py-4 px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="mr-3 sm:mr-4">
-              <Logo />
-            </Link>
-            <HeaderActions />
-          </div>
+    <header className={`sticky top-0 z-40 border-b bg-background ${className || ''}`}>
+      <div className="mx-auto flex h-12 w-full max-w-screen-2xl items-center justify-between gap-4 px-4 sm:px-6">
+        <div className="min-w-0">
+          <Link href="/" className="block">
+            <Logo />
+          </Link>
         </div>
-      </header>
-    </>
+        <HeaderActions />
+      </div>
+    </header>
   )
 }
-

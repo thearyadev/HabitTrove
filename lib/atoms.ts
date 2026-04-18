@@ -6,10 +6,8 @@ import {
   getDefaultWishlistData,
   Habit,
   ViewType,
-  getDefaultPublicUsersData,
   CompletionCache,
   getDefaultServerSettings,
-  UserId,
 } from "./types";
 import {
   getTodayInTimezone,
@@ -33,16 +31,17 @@ export interface BrowserSettings {
   expandedHabits: boolean
   expandedTasks: boolean
   expandedWishlist: boolean
+  sidebarCollapsed: boolean
 }
 
 export const browserSettingsAtom = atomWithStorage('browserSettings', {
   viewType: 'habits',
   expandedHabits: false,
   expandedTasks: false,
-  expandedWishlist: false
+  expandedWishlist: false,
+  sidebarCollapsed: false,
 } as BrowserSettings)
 
-export const usersAtom = atom(getDefaultPublicUsersData())
 export const settingsAtom = atom(getDefaultSettings());
 export const habitsAtom = atom(getDefaultHabitsData());
 export const coinsAtom = atom(getDefaultCoinsData());
@@ -86,26 +85,9 @@ export const transactionsTodayAtom = atom((get) => {
   return calculateTransactionsToday(coins.transactions, settings.system.timezone);
 });
 
-// Atom to store the current logged-in user's ID.
-// This should be set by your application when the user session is available.
-export const currentUserIdAtom = atom<UserId | undefined>(undefined);
-
-export const currentUserAtom = atom((get) => {
-  const currentUserId = get(currentUserIdAtom);
-  const users = get(usersAtom);
-  return users.users.find(user => user.id === currentUserId);
-})
-
-// Derived atom for current balance for the logged-in user
 export const coinsBalanceAtom = atom((get) => {
-  const loggedInUserId = get(currentUserIdAtom);
-  if (!loggedInUserId) {
-    return 0; // No user logged in or ID not set, so balance is 0
-  }
   const coins = get(coinsAtom);
-  const balance = coins.transactions
-    .filter(transaction => transaction.userId === loggedInUserId)
-    .reduce((sum, transaction) => sum + transaction.amount, 0);
+  const balance = coins.transactions.reduce((sum, transaction) => sum + transaction.amount, 0);
   return roundToInteger(balance);
 });
 
@@ -124,26 +106,8 @@ export const pomodoroAtom = atom<PomodoroAtom>({
   minimized: false,
 })
 
-import { prepareDataForHashing, generateCryptoHash } from '@/lib/utils';
-
 export const userSelectAtom = atom<boolean>(false)
 export const aboutOpenAtom = atom<boolean>(false)
-
-/**
- * Asynchronous atom that calculates a freshness token (hash) based on the current client-side data.
- * This token can be compared with a server-generated token to detect data discrepancies.
- */
-export const clientFreshnessTokenAtom = atom(async (get) => {
-  const settings = get(settingsAtom);
-  const habits = get(habitsAtom);
-  const coins = get(coinsAtom);
-  const wishlist = get(wishlistAtom);
-  const users = get(usersAtom);
-
-  const dataString = prepareDataForHashing(settings, habits, coins, wishlist, users);
-  const hash = await generateCryptoHash(dataString);
-  return hash;
-});
 
 // Derived atom for completion cache
 export const completionCacheAtom = atom((get) => {

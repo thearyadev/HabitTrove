@@ -1,8 +1,8 @@
-import { useAtom, atom } from 'jotai'
+import { useAtom } from 'jotai'
 import { useTranslations } from 'next-intl'
-import { habitsAtom, coinsAtom, settingsAtom, usersAtom, habitFreqMapAtom, currentUserAtom } from '@/lib/atoms'
+import { habitsAtom, coinsAtom, settingsAtom, habitFreqMapAtom } from '@/lib/atoms'
 import { addCoins, removeCoins, saveHabitsData } from '@/app/actions/data'
-import { Habit, Permission, SafeUser, User } from '@/lib/types'
+import { Habit } from '@/lib/types'
 import { toast } from '@/hooks/use-toast'
 import { DateTime } from 'luxon'
 import {
@@ -16,52 +16,20 @@ import {
   getISODate,
   d2s,
   playSound,
-  checkPermission
 } from '@/lib/utils'
 import { ToastAction } from '@/components/ui/toast'
 import { Undo2 } from 'lucide-react'
 
 
-function handlePermissionCheck(
-  user: SafeUser | User | undefined,
-  resource: 'habit' | 'wishlist' | 'coins',
-  action: 'write' | 'interact',
-  tCommon: (key: string, values?: Record<string, any>) => string
-): boolean {
-  if (!user) {
-    toast({
-      title: tCommon("authenticationRequiredTitle"),
-      description: tCommon("authenticationRequiredDescription"),
-      variant: "destructive",
-    })
-    return false
-  }
-
-  if (!user.isAdmin && !checkPermission(user.permissions, resource, action)) {
-    toast({
-      title: tCommon("permissionDeniedTitle"),
-      description: tCommon("permissionDeniedDescription", { action, resource }),
-      variant: "destructive",
-    })
-    return false
-  }
-
-  return true
-}
-
-
 export function useHabits() {
   const t = useTranslations('useHabits');
   const tCommon = useTranslations('Common');
-  const [usersData] = useAtom(usersAtom)
-  const [currentUser] = useAtom(currentUserAtom)
   const [habitsData, setHabitsData] = useAtom(habitsAtom)
   const [coins, setCoins] = useAtom(coinsAtom)
   const [settings] = useAtom(settingsAtom)
   const [habitFreqMap] = useAtom(habitFreqMapAtom)
 
   const completeHabit = async (habit: Habit) => {
-    if (!handlePermissionCheck(currentUser, 'habit', 'interact', tCommon)) return
     const timezone = settings.system.timezone
     const today = getTodayInTimezone(timezone)
 
@@ -106,7 +74,9 @@ export function useHabits() {
         type: habit.isTask ? 'TASK_COMPLETION' : 'HABIT_COMPLETION',
         relatedItemId: habit.id,
       })
-      isTargetReached && playSound()
+      if (isTargetReached) {
+        playSound()
+      }
       toast({
         title: t("completedTitle"),
         description: t("earnedCoinsDescription", { coinReward: habit.coinReward }),
@@ -135,7 +105,6 @@ export function useHabits() {
   }
 
   const undoComplete = async (habit: Habit) => {
-    if (!handlePermissionCheck(currentUser, 'habit', 'interact', tCommon)) return
     const timezone = settings.system.timezone
     const today = t2d({ timestamp: getTodayInTimezone(timezone), timezone })
 
@@ -204,7 +173,6 @@ export function useHabits() {
   }
 
   const saveHabit = async (habit: Omit<Habit, 'id'> & { id?: string }) => {
-    if (!handlePermissionCheck(currentUser, 'habit', 'write', tCommon)) return
     const newHabit = {
       ...habit,
       id: habit.id || getNowInMilliseconds().toString()
@@ -219,7 +187,6 @@ export function useHabits() {
   }
 
   const deleteHabit = async (id: string) => {
-    if (!handlePermissionCheck(currentUser, 'habit', 'write', tCommon)) return
     const updatedHabits = habitsData.habits.filter(h => h.id !== id)
     await saveHabitsData({ habits: updatedHabits })
     setHabitsData({ habits: updatedHabits })
@@ -227,7 +194,6 @@ export function useHabits() {
   }
 
   const completePastHabit = async (habit: Habit, date: DateTime) => {
-    if (!handlePermissionCheck(currentUser, 'habit', 'interact', tCommon)) return
     const timezone = settings.system.timezone
     const dateKey = getISODate({ dateTime: date, timezone })
 
@@ -297,7 +263,6 @@ export function useHabits() {
   }
 
   const archiveHabit = async (id: string) => {
-    if (!handlePermissionCheck(currentUser, 'habit', 'write', tCommon)) return
     const updatedHabits = habitsData.habits.map(h =>
       h.id === id ? { ...h, archived: true } : h
     )
@@ -306,7 +271,6 @@ export function useHabits() {
   }
 
   const unarchiveHabit = async (id: string) => {
-    if (!handlePermissionCheck(currentUser, 'habit', 'write', tCommon)) return
     const updatedHabits = habitsData.habits.map(h =>
       h.id === id ? { ...h, archived: false } : h
     )

@@ -1,9 +1,14 @@
+import path from "path";
 import type { NextConfig } from "next";
 import createNextIntlPlugin from 'next-intl/plugin';
 
 const nextConfig: NextConfig = {
-  /* config options here */
   output: 'standalone',
+  outputFileTracingRoot: path.join(process.cwd()),
+  turbopack: {
+    root: path.join(process.cwd()),
+  },
+  allowedDevOrigins: ['192.168.1.73'],
   webpack: (config) => {
     config.module.rules.push({
       test: /\.md$/,

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -26,6 +26,26 @@ export default function DrawingCanvas({ initialDrawing, onSave, onClear }: Drawi
   
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const contextRef = useRef<CanvasRenderingContext2D | null>(null)
+
+  const redrawCanvas = useCallback(() => {
+    const canvas = canvasRef.current
+    if (!canvas || !contextRef.current) return
+
+    const context = contextRef.current
+    context.clearRect(0, 0, canvas.width, canvas.height)
+
+    drawingHistory.forEach(stroke => {
+      if (stroke.points.length === 0) return
+      context.beginPath()
+      context.strokeStyle = stroke.color
+      context.lineWidth = stroke.thickness
+      context.moveTo(stroke.points[0].x, stroke.points[0].y)
+      stroke.points.forEach(point => {
+        context.lineTo(point.x, point.y)
+      })
+      context.stroke()
+    })
+  }, [drawingHistory])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -67,7 +87,7 @@ export default function DrawingCanvas({ initialDrawing, onSave, onClear }: Drawi
 
   useEffect(() => {
     redrawCanvas()
-  }, [drawingHistory])
+  }, [redrawCanvas])
 
   const getMousePos = (event: React.MouseEvent) => {
     const canvas = canvasRef.current
@@ -123,26 +143,6 @@ export default function DrawingCanvas({ initialDrawing, onSave, onClear }: Drawi
     }
     setIsDrawing(false)
     contextRef.current?.closePath()
-  }
-
-  const redrawCanvas = () => {
-    const canvas = canvasRef.current
-    if (!canvas || !contextRef.current) return
-
-    const context = contextRef.current
-    context.clearRect(0, 0, canvas.width, canvas.height)
-
-    drawingHistory.forEach(stroke => {
-      if (stroke.points.length === 0) return
-      context.beginPath()
-      context.strokeStyle = stroke.color
-      context.lineWidth = stroke.thickness
-      context.moveTo(stroke.points[0].x, stroke.points[0].y)
-      stroke.points.forEach(point => {
-        context.lineTo(point.x, point.y)
-      })
-      context.stroke()
-    })
   }
 
   const handleUndo = () => {

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   if (process.env.NODE_ENV !== 'development' && request.nextUrl.pathname.startsWith('/debug')) {
     return new NextResponse('Not Found', { status: 404 })
   }

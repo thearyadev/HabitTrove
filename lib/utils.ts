@@ -2,10 +2,9 @@ import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { DateTime, DateTimeFormatOptions } from "luxon"
 import { datetime, RRule } from 'rrule'
-import { Freq, Habit, CoinTransaction, Permission, ParsedFrequencyResult, ParsedResultType, User, Settings, HabitsData, CoinsData, WishlistData, UserData, PublicUserData } from '@/lib/types'
+import { Freq, Habit, CoinTransaction, ParsedFrequencyResult, ParsedResultType, Settings, HabitsData, CoinsData, WishlistData } from '@/lib/types'
 import { DUE_MAP, INITIAL_DUE, RECURRENCE_RULE_MAP } from "./constants"
 import * as chrono from 'chrono-node'
-import _ from "lodash"
 import { v4 as uuidv4 } from 'uuid'
 import stableStringify from 'json-stable-stringify';
 
@@ -438,54 +437,8 @@ export const openWindow = (url: string): boolean => {
   return true
 }
 
-export function deepMerge<T>(a: T, b: T) {
-  return _.merge(a, b, (x: unknown, y: unknown) => {
-    if (_.isArray(a)) {
-      return a.concat(b)
-    }
-  })
-}
-
-export function checkPermission(
-  permissions: Permission[] | undefined,
-  resource: 'habit' | 'wishlist' | 'coins',
-  action: 'write' | 'interact'
-): boolean {
-  if (!permissions) return false
-
-  return permissions.some(permission => {
-    switch (resource) {
-      case 'habit':
-        return permission.habit[action]
-      case 'wishlist':
-        return permission.wishlist[action]
-      case 'coins':
-        return permission.coins[action]
-      default:
-        return false
-    }
-  })
-}
-
 export function uuid() {
   return uuidv4()
-}
-
-export function hasPermission(
-  currentUser: User | undefined,
-  resource: 'habit' | 'wishlist' | 'coins',
-  action: 'write' | 'interact'
-): boolean {
-  // If no current user, no permissions.
-  if (!currentUser) {
-    return false;
-  }
-  // If user is admin, they have all permissions.
-  if (currentUser.isAdmin) {
-    return true;
-  }
-  // Otherwise, check specific permissions.
-  return checkPermission(currentUser.permissions, resource, action);
 }
 
 /**
@@ -497,20 +450,14 @@ export function prepareDataForHashing(
   habits: HabitsData,
   coins: CoinsData,
   wishlist: WishlistData,
-  users: UserData | PublicUserData
 ): string {
-  // Combine all data into a single object.
-  // The order of keys in this object itself doesn't matter due to stableStringify,
-  // but being explicit helps in understanding what's being hashed.
   const combinedData = {
     settings,
     habits,
     coins,
     wishlist,
-    users,
-  };
+  }
   const stringifiedData = stableStringify(combinedData);
-  // Handle cases where stringify might return undefined.
   if (stringifiedData === undefined) {
     throw new Error("Failed to stringify data for hashing. stableStringify returned undefined.");
   }
@@ -524,18 +471,31 @@ export function prepareDataForHashing(
  * @returns A promise that resolves to the hex string of the hash.
  */
 export async function generateCryptoHash(dataString: string): Promise<string | null> {
+  const fallbackHash = (input: string) => {
+    let hash = 5381;
+
+    for (let i = 0; i < input.length; i += 1) {
+      hash = ((hash << 5) + hash) ^ input.charCodeAt(i);
+    }
+
+    return `fallback-${(hash >>> 0).toString(16).padStart(8, '0')}`;
+  };
+
   try {
+    const subtle = globalThis.crypto?.subtle;
+
+    if (!subtle) {
+      return fallbackHash(dataString);
+    }
+
     const encoder = new TextEncoder();
     const data = encoder.encode(dataString);
-    // globalThis.crypto should be available in modern browsers and Node.js (v19+)
-    // For Node.js v15-v18, you might need: const { subtle } = require('node:crypto').webcrypto;
-    const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', data);
+    const hashBuffer = await subtle.digest('SHA-256', data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
-    // Convert buffer to hex string
     const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     return hashHex;
   } catch (error) {
     console.error(`Failed to generate hash: ${error}`);
-    return null;
+    return fallbackHash(dataString);
   }
 }

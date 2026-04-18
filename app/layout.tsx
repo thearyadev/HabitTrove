@@ -1,31 +1,26 @@
 import './globals.css'
-import { DM_Sans } from 'next/font/google'
+import { Fraunces, IBM_Plex_Sans } from 'next/font/google'
 import { JotaiProvider } from '@/components/jotai-providers'
 import { JotaiHydrate } from '@/components/jotai-hydrate'
-import { loadSettings, loadHabitsData, loadCoinsData, loadWishlistData, loadUsersPublicData, loadServerSettings } from './actions/data'
+import { loadSettings, loadHabitsData, loadCoinsData, loadWishlistData, loadServerSettings } from './actions/data'
 import Layout from '@/components/Layout'
 import { Toaster } from '@/components/ui/toaster'
 import { ThemeProvider } from "@/components/theme-provider"
-import { SessionProvider } from 'next-auth/react'
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
-import { Suspense } from 'react'
-import LoadingSpinner from '@/components/LoadingSpinner'
+import ServiceWorkerRegister from '@/components/ServiceWorkerRegister'
 
-
-// Inter (clean, modern, excellent readability)
-// const inter = Inter({
-//   subsets: ['latin'],
-//   weight: ['400', '500', '600', '700']
-// })
-
-// Clean and contemporary
-const dmSans = DM_Sans({
+const bodyFont = IBM_Plex_Sans({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700']
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-sans',
 })
 
-const activeFont = dmSans
+const displayFont = Fraunces({
+  subsets: ['latin'],
+  weight: ['500', '600', '700'],
+  variable: '--font-display',
+})
 
 export const metadata = {
   title: 'HabitTrove',
@@ -44,68 +39,45 @@ export default async function RootLayout({
   // side is the easiest way to get started
   const messages = await getMessages();
 
-  const [initialSettings, initialHabits, initialCoins, initialWishlist, initialUsers, initialServerSettings] = await Promise.all([
+  const [initialSettings, initialHabits, initialCoins, initialWishlist, initialServerSettings] = await Promise.all([
     loadSettings(),
     loadHabitsData(),
     loadCoinsData(),
     loadWishlistData(),
-    loadUsersPublicData(),
     loadServerSettings(),
   ])
 
   return (
-    // set suppressHydrationWarning to true to prevent hydration errors when using ThemeProvider (https://ui.shadcn.com/docs/dark-mode/next)
     <html lang={locale} suppressHydrationWarning>
-      <body className={activeFont.className}>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                  navigator.serviceWorker.register('/sw.js')
-                    .then(registration => {
-                      console.log('ServiceWorker registration successful');
-                    })
-                    .catch(err => {
-                      console.log('ServiceWorker registration failed: ', err);
-                    });
-                });
-              }
-            `,
-          }}
-        />
+      <body className={`${bodyFont.variable} ${displayFont.variable} font-sans`}>
         <JotaiProvider>
-          <Suspense fallback={<LoadingSpinner />}>
-            <JotaiHydrate
-              initialValues={{
-                settings: initialSettings,
-                habits: initialHabits,
-                coins: initialCoins,
-                wishlist: initialWishlist,
-                users: initialUsers,
-                serverSettings: initialServerSettings,
-              }}
-            >
-              <NextIntlClientProvider locale={locale} messages={messages}>
-                <ThemeProvider
-                  attribute="class"
-                  defaultTheme="system"
-                  enableSystem
-                  disableTransitionOnChange
-                >
-                  <SessionProvider>
-                    <Layout>
-                      {children}
-                    </Layout>
-                  </SessionProvider>
-                </ThemeProvider>
-              </NextIntlClientProvider>
-            </JotaiHydrate>
-          </Suspense>
+          <JotaiHydrate
+            initialValues={{
+              settings: initialSettings,
+              habits: initialHabits,
+              coins: initialCoins,
+              wishlist: initialWishlist,
+              serverSettings: initialServerSettings,
+            }}
+          >
+            <NextIntlClientProvider locale={locale} messages={messages}>
+              <ThemeProvider
+                attribute="class"
+                defaultTheme="dark"
+                forcedTheme="dark"
+                enableSystem={false}
+                disableTransitionOnChange
+              >
+                <ServiceWorkerRegister />
+                <Layout>
+                  {children}
+                </Layout>
+              </ThemeProvider>
+            </NextIntlClientProvider>
+          </JotaiHydrate>
         </JotaiProvider>
         <Toaster />
       </body>
     </html>
   )
 }
-

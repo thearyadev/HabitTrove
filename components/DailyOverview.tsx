@@ -426,7 +426,7 @@ export default function DailyOverview({
         <CardHeader>
           <CardTitle>{t('todaysOverviewTitle')}</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="max-h-[520px] overflow-y-auto">
           <div className="space-y-6">
             {/* Tasks Section */}
             {hasTasks && (

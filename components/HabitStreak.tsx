@@ -2,11 +2,9 @@
 
 import { Habit } from '@/lib/types'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { d2s, getNow } from '@/lib/utils' // Removed getCompletedHabitsForDate
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useAtom } from 'jotai'
 import { useTranslations } from 'next-intl'
-import { settingsAtom, hasTasksAtom, completedHabitsMapAtom } from '@/lib/atoms' // Added completedHabitsMapAtom
+import { hasTasksAtom } from '@/lib/atoms'
 
 interface HabitStreakProps {
   habits: Habit[]
@@ -14,75 +12,30 @@ interface HabitStreakProps {
 
 export default function HabitStreak({ habits }: HabitStreakProps) {
   const t = useTranslations('HabitStreak');
-  const [settings] = useAtom(settingsAtom)
   const [hasTasks] = useAtom(hasTasksAtom)
-  const [completedHabitsMap] = useAtom(completedHabitsMapAtom) // Use the atom
-
-  // Get the last 7 days of data
-  const dates = Array.from({ length: 7 }, (_, i) => {
-    const d = getNow({ timezone: settings.system.timezone });
-    return d2s({ dateTime: d.minus({ days: i }), format: 'yyyy-MM-dd', timezone: settings.system.timezone });
-  }).reverse()
-
-  const completions = dates.map(date => {
-    // Get completed habits for the date from the map
-    const completedOnDate = completedHabitsMap.get(date) || [];
-
-    // Filter the completed list to count habits and tasks
-    const completedHabitsCount = completedOnDate.filter(h => !h.isTask).length;
-    const completedTasksCount = completedOnDate.filter(h => h.isTask).length;
-
-    return {
-      date,
-      habits: completedHabitsCount,
-      tasks: completedTasksCount
-    };
-  });
+  const activeItems = habits.filter((habit) => !habit.archived)
+  const activeHabits = activeItems.filter((habit) => !habit.isTask)
+  const activeTasks = activeItems.filter((habit) => habit.isTask)
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>{t('dailyCompletionStreakTitle')}</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="w-full aspect-[2/1]">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart
-              data={completions}
-              margin={{
-                top: 5,
-                right: 30,
-                left: 20,
-                bottom: 5,
-              }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis allowDecimals={false} />
-              <Tooltip formatter={(value, name) => {
-                const translatedName = name === 'habits' ? t('tooltipHabitsLabel') : t('tooltipTasksLabel');
-                return [`${value} ${translatedName}`, t('tooltipCompletedLabel')];
-              }} />
-              <Line
-                type="monotone"
-                name={t('tooltipHabitsLabel')}
-                dataKey="habits"
-                stroke="#14b8a6"
-                strokeWidth={2}
-                dot={false}
-              />
-              {hasTasks && (
-                <Line
-                  type="monotone"
-                  name={t('tooltipTasksLabel')}
-                  dataKey="tasks"
-                  stroke="#f59e0b"
-                  strokeWidth={2}
-                  dot={false}
-                />
-              )}
-            </LineChart>
-          </ResponsiveContainer>
+      <CardContent className="space-y-4">
+        <div className="rounded-md border bg-muted/30 px-4 py-3">
+          <div className="text-sm font-medium">Current overview</div>
+          <div className="text-sm text-foreground">{activeItems.length} live habits/tasks tracked</div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-md border p-4">
+            <div className="text-sm text-muted-foreground">{t('tooltipHabitsLabel')}</div>
+            <div className="mt-1 text-2xl font-semibold">{activeHabits.length}</div>
+          </div>
+          <div className="rounded-md border p-4">
+            <div className="text-sm text-muted-foreground">{hasTasks ? t('tooltipTasksLabel') : 'Tasks'}</div>
+            <div className="mt-1 text-2xl font-semibold">{activeTasks.length}</div>
+          </div>
         </div>
       </CardContent>
     </Card>

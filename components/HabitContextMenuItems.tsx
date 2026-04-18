@@ -1,8 +1,8 @@
 import { Habit } from '@/lib/types';
 import { useHabits } from '@/hooks/useHabits';
 import { useAtom } from 'jotai';
-import { pomodoroAtom, settingsAtom, currentUserAtom } from '@/lib/atoms';
-import { d2t, getNow, isHabitDueToday, hasPermission } from '@/lib/utils';
+import { pomodoroAtom, settingsAtom } from '@/lib/atoms';
+import { d2t, getNow, isHabitDueToday } from '@/lib/utils';
 import { DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { ContextMenuItem, ContextMenuSeparator } from '@/components/ui/context-menu';
 import { Timer, Calendar, Pin, Edit, Archive, ArchiveRestore, Trash2 } from 'lucide-react';
@@ -27,10 +27,8 @@ export function HabitContextMenuItems({
   const { saveHabit, archiveHabit, unarchiveHabit } = useHabits();
   const [settings] = useAtom(settingsAtom);
   const [, setPomo] = useAtom(pomodoroAtom);
-  const [currentUser] = useAtom(currentUserAtom);
-
-  const canWrite = hasPermission(currentUser, 'habit', 'write'); // For UI disabling if not handled by useHabits' actions
-  const canInteract = hasPermission(currentUser, 'habit', 'interact');
+  const canWrite = true;
+  const canInteract = true;
 
   const MenuItemComponent = context === 'daily-overview' ? ContextMenuItem : DropdownMenuItem;
   const MenuSeparatorComponent = context === 'daily-overview' ? ContextMenuSeparator : DropdownMenuSeparator;

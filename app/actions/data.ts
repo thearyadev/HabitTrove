@@ -2,173 +2,30 @@
 
 import fs from 'fs/promises'
 import path from 'path'
+import { randomUUID } from 'crypto'
 import {
-  HabitsData,
   CoinsData,
   CoinTransaction,
-  TransactionType,
-  WishlistItemType,
-  WishlistData,
+  HabitsData,
+  ServerSettings,
   Settings,
-  DataType,
-  DATA_DEFAULTS,
-  getDefaultSettings,
-  UserData,
-  getDefaultUsersData,
-  User,
-  PublicUser,
-  PublicUserData,
-  getDefaultWishlistData,
-  getDefaultHabitsData,
-  getDefaultCoinsData,
-  Permission,
-  ServerSettings
+  TransactionType,
+  WishlistData,
+  WishlistItemType,
 } from '@/lib/types'
-import { d2t, getNow, uuid } from '@/lib/utils';
-import { verifyPassword } from "@/lib/server-helpers";
-import { saltAndHashPassword } from "@/lib/server-helpers";
-import { signInSchema } from '@/lib/zod';
-import _ from 'lodash';
-import { getCurrentUser } from '@/lib/server-helpers'
-import { prepareDataForHashing, generateCryptoHash } from '@/lib/utils';
-import { sanitizeUserData } from '@/lib/user-sanitizer'
+import { d2t, getNow } from '@/lib/utils'
 import { ALLOWED_AVATAR_EXTENSIONS, ALLOWED_AVATAR_MIME_TYPES } from '@/lib/avatar'
+import { getCoins, insertCoinTransaction, saveCoinSnapshot, updateTransactionNoteRecord } from '@/lib/db/repos/coins'
+import { getHabits, saveHabits } from '@/lib/db/repos/habits'
+import { getSettings, saveSettingsRecord } from '@/lib/db/repos/settings'
+import { getWishlist, saveWishlist } from '@/lib/db/repos/wishlist'
 
-
-
-type ResourceType = 'habit' | 'wishlist' | 'coins'
-type ActionType = 'write' | 'interact'
-
-async function verifyPermission(
-  resource: ResourceType,
-  action: ActionType
-): Promise<void> {
-  // const user = await getCurrentUser()
-
-  // if (!user) throw new PermissionError('User not authenticated')
-  // if (user.isAdmin) return // Admins bypass permission checks
-
-  // if (!checkPermission(user.permissions, resource, action)) {
-  //   throw new PermissionError(`User does not have ${action} permission for ${resource}`)
-  // }
-  return
-}
-
-function getDefaultData<T>(type: DataType): T {
-  return DATA_DEFAULTS[type]() as T;
-}
-
-async function ensureDataDir() {
-  const dataDir = path.join(process.cwd(), 'data')
-  try {
-    await fs.access(dataDir)
-  } catch {
-    await fs.mkdir(dataDir, { recursive: true })
-  }
-}
-
-// --- Backup Debug Action ---
 export async function triggerManualBackup(): Promise<{ success: boolean; message: string }> {
-  if (process.env.NODE_ENV !== 'development') {
-    return { success: false, message: 'Permission denied.' }
-  }
-
-  const user = await getCurrentUser()
-  if (!user?.isAdmin) {
-    return { success: false, message: 'Permission denied.' }
-  }
-
-  console.log('Manual backup trigger requested...')
-  try {
-    // Import runBackup locally to avoid potential circular dependencies if moved
-    const { runBackup } = await import('@/lib/backup')
-    await runBackup()
-    console.log('Manual backup trigger completed successfully.')
-    return { success: true, message: 'Backup process completed successfully.' }
-  } catch (error) {
-    console.error('Manual backup trigger failed:', error)
-    return {
-      success: false,
-      message: `Backup failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-    }
-  }
+  return { success: false, message: 'Backups are disabled in the single-user build.' }
 }
 
-async function loadData<T>(type: DataType): Promise<T> {
-  try {
-    await ensureDataDir()
-    const filePath = path.join(process.cwd(), 'data', `${type}.json`)
-
-    try {
-      await fs.access(filePath)
-    } catch {
-      // File doesn't exist, create it with default data
-      const initialData = getDefaultData(type)
-      await fs.writeFile(filePath, JSON.stringify(initialData, null, 2))
-      return initialData as T
-    }
-
-    // File exists, read and return its contents
-    const data = await fs.readFile(filePath, 'utf8')
-    const jsonData = JSON.parse(data) as T
-    return jsonData
-  } catch (error) {
-    console.error(`Error loading ${type} data:`, error)
-    return getDefaultData<T>(type)
-  }
-}
-
-async function saveData<T>(type: DataType, data: T): Promise<void> {
-  try {
-    const user = await getCurrentUser()
-    if (!user) throw new Error('User not authenticated')
-
-    await ensureDataDir()
-    const filePath = path.join(process.cwd(), 'data', `${type}.json`)
-    const saveData = data
-    await fs.writeFile(filePath, JSON.stringify(saveData, null, 2))
-  } catch (error) {
-    console.error(`Error saving ${type} data:`, error)
-  }
-}
-
-/**
- * Calculates the server's global freshness token based on all core data files.
- * This is an expensive operation as it reads all data files.
- */
-async function calculateServerFreshnessToken(): Promise<string | null> {
-  try {
-    const settings = await loadSettings();
-    const habits = await loadHabitsData();
-    const coins = await loadCoinsData();
-    const wishlist = await loadWishlistData();
-    const users = await loadUsersPublicData();
-
-    const dataString = prepareDataForHashing(
-      settings,
-      habits,
-      coins,
-      wishlist,
-      users
-    );
-    const serverToken = await generateCryptoHash(dataString);
-    return serverToken;
-  } catch (error) {
-    console.error("Error calculating server freshness token:", error);
-    throw error;
-  }
-}
-
-// Wishlist specific functions
 export async function loadWishlistData(): Promise<WishlistData> {
-  const user = await getCurrentUser()
-  if (!user) return getDefaultWishlistData()
-
-  const data = await loadData<WishlistData>('wishlist')
-  return {
-    ...data,
-    items: data.items.filter(x => user.isAdmin || x.userIds?.includes(user.id))
-  }
+  return getWishlist()
 }
 
 export async function loadWishlistItems(): Promise<WishlistItemType[]> {
@@ -177,97 +34,23 @@ export async function loadWishlistItems(): Promise<WishlistItemType[]> {
 }
 
 export async function saveWishlistItems(data: WishlistData): Promise<void> {
-  await verifyPermission('wishlist', 'write')
-  const user = await getCurrentUser()
-
-  data.items = data.items.map(wishlist => ({
-    ...wishlist,
-    userIds: wishlist.userIds || (user ? [user.id] : undefined)
-  }))
-
-  if (!user?.isAdmin) {
-    const existingData = await loadData<WishlistData>('wishlist')
-    existingData.items = existingData.items.filter(x => user?.id && !x.userIds?.includes(user?.id))
-    data.items = [
-      ...existingData.items,
-      ...data.items
-    ]
-  }
-
-  return saveData('wishlist', data)
+  saveWishlist(data)
 }
 
-// Habits specific functions
 export async function loadHabitsData(): Promise<HabitsData> {
-  const user = await getCurrentUser()
-  if (!user) return getDefaultHabitsData()
-  const data = await loadData<HabitsData>('habits')
-  return {
-    ...data,
-    habits: data.habits.filter(x => user.isAdmin || x.userIds?.includes(user.id))
-  }
+  return getHabits()
 }
 
 export async function saveHabitsData(data: HabitsData): Promise<void> {
-  await verifyPermission('habit', 'write')
-
-  const user = await getCurrentUser()
-  // Create clone of input data
-  const newData = _.cloneDeep(data)
-
-  // Map habits with user IDs
-  newData.habits = newData.habits.map(habit => ({
-    ...habit,
-    userIds: habit.userIds || (user ? [user.id] : undefined)
-  }))
-
-  if (!user?.isAdmin) {
-    const existingData = await loadData<HabitsData>('habits')
-    const existingHabits = existingData.habits.filter(x => user?.id && !x.userIds?.includes(user?.id))
-    newData.habits = [
-      ...existingHabits,
-      ...newData.habits
-    ]
-  }
-
-  return saveData('habits', newData)
+  saveHabits(data)
 }
 
-
-// Coins specific functions
 export async function loadCoinsData(): Promise<CoinsData> {
-  try {
-    const user = await getCurrentUser()
-    if (!user) return getDefaultCoinsData()
-    const data = await loadData<CoinsData>('coins')
-    return {
-      ...data,
-      transactions: user.isAdmin ? data.transactions : data.transactions.filter(x => x.userId === user.id)
-    }
-  } catch {
-    return getDefaultCoinsData()
-  }
+  return getCoins()
 }
 
 export async function saveCoinsData(data: CoinsData): Promise<void> {
-  const user = await getCurrentUser()
-
-  // Create clones of the data
-  const newData = _.cloneDeep(data)
-  newData.transactions = newData.transactions.map(transaction => ({
-    ...transaction,
-    userId: transaction.userId || user?.id
-  }))
-
-  if (!user?.isAdmin) {
-    const existingData = await loadData<CoinsData>('coins')
-    const existingTransactions = existingData.transactions.filter(x => user?.id && x.userId !== user.id)
-    newData.transactions = [
-      ...newData.transactions,
-      ...existingTransactions
-    ]
-  }
-  return saveData('coins', newData)
+  saveCoinSnapshot(data)
 }
 
 export async function addCoins({
@@ -276,53 +59,32 @@ export async function addCoins({
   type = 'MANUAL_ADJUSTMENT',
   relatedItemId,
   note,
-  userId,
 }: {
   amount: number
   description: string
   type?: TransactionType
   relatedItemId?: string
   note?: string
-  userId?: string
 }): Promise<CoinsData> {
-  await verifyPermission('coins', type === 'MANUAL_ADJUSTMENT' ? 'write' : 'interact')
-  const currentUser = await getCurrentUser()
-  const data = await loadCoinsData()
-  const newTransaction: CoinTransaction = {
-    id: uuid(),
+  insertCoinTransaction({
+    id: randomUUID(),
     amount,
     type,
     description,
     timestamp: d2t({ dateTime: getNow({}) }),
-    ...(relatedItemId && { relatedItemId }),
-    ...(note && note.trim() !== '' && { note }),
-    userId: userId || currentUser?.id
-  }
+    relatedItemId,
+    note: note?.trim() ? note : undefined,
+  } satisfies CoinTransaction)
 
-  const newData: CoinsData = {
-    balance: data.balance + amount,
-    transactions: [newTransaction, ...data.transactions]
-  }
-
-  await saveCoinsData(newData)
-  return newData
+  return getCoins()
 }
 
 export async function loadSettings(): Promise<Settings> {
-  const defaultSettings = getDefaultSettings()
-
-  try {
-    const user = await getCurrentUser()
-    if (!user) return defaultSettings
-    const data = await loadData<Settings>('settings')
-    return { ...defaultSettings, ...data }
-  } catch {
-    return defaultSettings
-  }
+  return getSettings()
 }
 
 export async function saveSettings(settings: Settings): Promise<void> {
-  return saveData('settings', settings)
+  saveSettingsRecord(settings)
 }
 
 export async function removeCoins({
@@ -331,43 +93,38 @@ export async function removeCoins({
   type = 'MANUAL_ADJUSTMENT',
   relatedItemId,
   note,
-  userId,
 }: {
   amount: number
   description: string
   type?: TransactionType
   relatedItemId?: string
   note?: string
-  userId?: string
 }): Promise<CoinsData> {
-  await verifyPermission('coins', type === 'MANUAL_ADJUSTMENT' ? 'write' : 'interact')
-  const currentUser = await getCurrentUser()
-  const data = await loadCoinsData()
-  const newTransaction: CoinTransaction = {
-    id: uuid(),
-    amount: -amount,
+  insertCoinTransaction({
+    id: randomUUID(),
+    amount: -Math.abs(amount),
     type,
     description,
     timestamp: d2t({ dateTime: getNow({}) }),
-    ...(relatedItemId && { relatedItemId }),
-    ...(note && note.trim() !== '' && { note }),
-    userId: userId || currentUser?.id
-  }
+    relatedItemId,
+    note: note?.trim() ? note : undefined,
+  } satisfies CoinTransaction)
 
-  const newData: CoinsData = {
-    balance: Math.max(0, data.balance - amount),
-    transactions: [newTransaction, ...data.transactions]
-  }
+  return getCoins()
+}
 
-  await saveCoinsData(newData)
-  return newData
+export async function updateTransactionNote(transactionId: string, note: string): Promise<CoinsData> {
+  updateTransactionNoteRecord(transactionId, note.trim() || undefined)
+  return getCoins()
 }
 
 export async function uploadAvatar(formData: FormData): Promise<string> {
   const file = formData.get('avatar') as File
-  if (!file) throw new Error('No file provided')
+  if (!file) {
+    throw new Error('No file provided')
+  }
 
-  if (file.size > 5 * 1024 * 1024) { // 5MB
+  if (file.size > 5 * 1024 * 1024) {
     throw new Error('File size must be less than 5MB')
   }
 
@@ -381,15 +138,12 @@ export async function uploadAvatar(formData: FormData): Promise<string> {
     throw new Error('Unsupported avatar file extension')
   }
 
-  // Create avatars directory if it doesn't exist
   const avatarsDir = path.join(process.cwd(), 'data', 'avatars')
   await fs.mkdir(avatarsDir, { recursive: true })
 
-  // Generate unique filename
-  const filename = `${Date.now()}-${uuid()}${ext}`
+  const filename = `${Date.now()}-${randomUUID()}${ext}`
   const filePath = path.join(avatarsDir, filename)
 
-  // Save file
   const buffer = await file.arrayBuffer()
   await fs.writeFile(filePath, Buffer.from(buffer))
 
@@ -400,245 +154,10 @@ export async function getChangelog(): Promise<string> {
   try {
     const changelogPath = path.join(process.cwd(), 'CHANGELOG.md')
     return await fs.readFile(changelogPath, 'utf8')
-  } catch (error) {
-    console.error('Error loading changelog:', error)
+  } catch {
     return '# Changelog\n\nNo changelog available.'
   }
 }
-
-// user logic
-async function loadUsersData(): Promise<UserData> {
-  try {
-    return await loadData<UserData>('auth')
-  } catch {
-    return getDefaultUsersData()
-  }
-}
-
-export async function loadUsersPublicData(): Promise<PublicUserData> {
-  const data = await loadUsersData()
-  return sanitizeUserData(data)
-}
-
-export async function saveUsersData(data: UserData): Promise<void> {
-  return saveData('auth', data)
-}
-
-export async function getUser(username: string, plainTextPassword?: string): Promise<User | null> {
-  const data = await loadUsersData()
-
-  const user = data.users.find(user => user.username === username)
-  if (!user) return null
-
-  // Verify the plaintext password against the stored salt:hash
-  const isValidPassword = verifyPassword(plainTextPassword, user.password)
-  if (!isValidPassword) return null
-
-  return user
-}
-
-export async function createUser(formData: FormData): Promise<PublicUser> {
-  const username = formData.get('username') as string;
-  let password = formData.get('password') as string | undefined;
-  const avatarPath = formData.get('avatarPath') as string;
-  const permissions = formData.get('permissions') ?
-    JSON.parse(formData.get('permissions') as string) as Permission[] :
-    undefined;
-
-  if (password === null) password = undefined
-  // Validate username and password against schema
-  await signInSchema.parseAsync({ username, password });
-
-  const data = await loadUsersData();
-
-  // Check if username already exists
-  if (data.users.some(user => user.username === username)) {
-    throw new Error('Username already exists');
-  }
-
-  const hashedPassword = password ? saltAndHashPassword(password) : undefined;
-
-
-  const newUser: User = {
-    id: uuid(),
-    username,
-    password: hashedPassword,
-    permissions,
-    isAdmin: false,
-    lastNotificationReadTimestamp: undefined,
-    ...(avatarPath && { avatarPath })
-  };
-
-  const newData: UserData = {
-    users: [...data.users, newUser]
-  };
-
-  await saveUsersData(newData);
-  return sanitizeUserData({ users: [newUser] }).users[0]
-}
-
-export async function updateUser(userId: string, updates: Partial<Omit<User, 'id' | 'password'>>): Promise<PublicUser> {
-  const data = await loadUsersData()
-  const userIndex = data.users.findIndex(user => user.id === userId)
-
-  if (userIndex === -1) {
-    throw new Error('User not found')
-  }
-
-  // If username is being updated, check for duplicates
-  if (updates.username) {
-    const isDuplicate = data.users.some(
-      user => user.username === updates.username && user.id !== userId
-    )
-    if (isDuplicate) {
-      throw new Error('Username already exists')
-    }
-  }
-
-  const updatedUser = {
-    ...data.users[userIndex],
-    ...updates
-  }
-
-  const newData: UserData = {
-    users: [
-      ...data.users.slice(0, userIndex),
-      updatedUser,
-      ...data.users.slice(userIndex + 1)
-    ]
-  }
-
-  await saveUsersData(newData)
-  return sanitizeUserData({ users: [updatedUser] }).users[0]
-}
-
-export async function updateUserPassword(userId: string, newPassword?: string): Promise<void> {
-  const data = await loadUsersData()
-  const userIndex = data.users.findIndex(user => user.id === userId)
-
-  if (userIndex === -1) {
-    throw new Error('User not found')
-  }
-
-  const hashedPassword = newPassword ? saltAndHashPassword(newPassword) : ''
-
-  const updatedUser = {
-    ...data.users[userIndex],
-    password: hashedPassword
-  }
-
-  const newData: UserData = {
-    users: [
-      ...data.users.slice(0, userIndex),
-      updatedUser,
-      ...data.users.slice(userIndex + 1)
-    ]
-  }
-
-  await saveUsersData(newData)
-}
-
-export async function deleteUser(userId: string): Promise<void> {
-  // Load all necessary data
-  const wishlistData = await loadData<WishlistData>('wishlist')
-  const habitsData = await loadData<HabitsData>('habits')
-  const coinsData = await loadData<CoinsData>('coins')
-  const authData = await loadUsersData()
-
-  // Process Wishlist Data
-  const updatedWishlistItems = wishlistData.items.reduce((acc, item) => {
-    if (item.userIds?.includes(userId)) {
-      if (item.userIds.length === 1) {
-        // Remove item if this is the only user
-        return acc
-      } else {
-        // Remove userId from item's userIds
-        acc.push({
-          ...item,
-          userIds: item.userIds.filter(id => id !== userId)
-        })
-      }
-    } else {
-      // Keep item as is
-      acc.push(item)
-    }
-    return acc
-  }, [] as WishlistItemType[])
-  wishlistData.items = updatedWishlistItems
-  await saveData('wishlist', wishlistData)
-
-  // Process Habits Data
-  const updatedHabits = habitsData.habits.reduce((acc, habit) => {
-    if (habit.userIds?.includes(userId)) {
-      if (habit.userIds.length === 1) {
-        // Remove habit if this is the only user
-        return acc
-      } else {
-        // Remove userId from habit's userIds
-        acc.push({
-          ...habit,
-          userIds: habit.userIds.filter(id => id !== userId)
-        })
-      }
-    } else {
-      // Keep habit as is
-      acc.push(habit)
-    }
-    return acc
-  }, [] as HabitsData['habits'])
-  habitsData.habits = updatedHabits
-  await saveData('habits', habitsData)
-
-  // Process Coins Data
-  coinsData.transactions = coinsData.transactions.filter(
-    transaction => transaction.userId !== userId
-  )
-  // Recalculate balance
-  coinsData.balance = coinsData.transactions.reduce(
-    (sum, transaction) => sum + transaction.amount,
-    0
-  )
-  await saveData('coins', coinsData)
-
-  // Delete User from Auth Data
-  const userIndex = authData.users.findIndex(user => user.id === userId)
-
-  if (userIndex === -1) {
-    throw new Error('User not found')
-  }
-
-  authData.users = [
-    ...authData.users.slice(0, userIndex),
-    ...authData.users.slice(userIndex + 1)
-  ]
-
-  await saveUsersData(authData)
-}
-
-export async function updateLastNotificationReadTimestamp(userId: string, timestamp: string): Promise<void> {
-  const data = await loadUsersData()
-  const userIndex = data.users.findIndex(user => user.id === userId)
-
-  if (userIndex === -1) {
-    throw new Error('User not found for updating notification timestamp')
-  }
-
-  const updatedUser = {
-    ...data.users[userIndex],
-    lastNotificationReadTimestamp: timestamp
-  }
-
-  const newData: UserData = {
-    users: [
-      ...data.users.slice(0, userIndex),
-      updatedUser,
-      ...data.users.slice(userIndex + 1)
-    ]
-  }
-
-  await saveUsersData(newData)
-}
-
 
 export async function loadServerSettings(): Promise<ServerSettings> {
   return {
@@ -646,23 +165,6 @@ export async function loadServerSettings(): Promise<ServerSettings> {
   }
 }
 
-/**
- * Checks if the client's data is fresh by comparing its token with the server's token.
- * @param clientToken The freshness token calculated by the client.
- * @returns A promise that resolves to an object { isFresh: boolean }.
- */
-export async function checkDataFreshness(clientToken: string): Promise<{ isFresh: boolean }> {
-  try {
-    const serverToken = await calculateServerFreshnessToken();
-    const isFresh = clientToken === serverToken;
-    if (!isFresh) {
-      console.log(`Data freshness check: Stale. Client token: ${clientToken}, Server token: ${serverToken}`);
-    }
-    return { isFresh };
-  } catch (error) {
-    console.error("Error in checkDataFreshness:", error);
-    // If server fails to determine its token, assume client might be stale to be safe,
-    // or handle error reporting differently.
-    return { isFresh: false };
-  }
+export async function checkDataFreshness(): Promise<{ isFresh: boolean }> {
+  return { isFresh: true }
 }

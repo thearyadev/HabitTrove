@@ -1,13 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { RRule } from 'rrule'
 import { useAtom } from 'jotai'
 import { useTranslations } from 'next-intl'
-import { settingsAtom, usersAtom, currentUserAtom } from '@/lib/atoms'
+import { settingsAtom } from '@/lib/atoms'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -15,7 +14,6 @@ import { Zap, Brush } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Habit } from '@/lib/types'
 import EmojiPickerButton from './EmojiPickerButton'
-import ModalOverlay from './ModalOverlay' // Import the new component
 import DrawingModal from './DrawingModal'
 import DrawingDisplay from './DrawingDisplay'
 import { convertHumanReadableFrequencyToMachineReadable, convertMachineReadableFrequencyToHumanReadable, d2t, serializeRRule } from '@/lib/utils'
@@ -45,14 +43,16 @@ export default function AddEditHabitModal({ onClose, onSave, habit, isTask }: Ad
     timezone: settings.system.timezone
   }) : (isRecurRule ? INITIAL_RECURRENCE_RULE : INITIAL_DUE);
   const [ruleText, setRuleText] = useState<string>(initialRuleText)
-  const [currentUser] = useAtom(currentUserAtom)
   const [isQuickDatesOpen, setIsQuickDatesOpen] = useState(false)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null); // State for validation message
-  const [selectedUserIds, setSelectedUserIds] = useState<string[]>((habit?.userIds || []).filter(id => id !== currentUser?.id))
-  const [usersData] = useAtom(usersAtom)
-  const users = usersData.users
   const [drawing, setDrawing] = useState<string>(habit?.drawing || '')
   const [isDrawingModalOpen, setIsDrawingModalOpen] = useState(false)
+  const parsedFrequency = useMemo(() => (
+    convertHumanReadableFrequencyToMachineReadable({
+      text: ruleText,
+      timezone: settings.system.timezone,
+      isRecurring: isRecurRule,
+    })
+  ), [ruleText, settings.system.timezone, isRecurRule])
 
   function getFrequencyUpdate() {
     if (ruleText === initialRuleText && habit?.frequency) {
@@ -80,6 +80,10 @@ export default function AddEditHabitModal({ onClose, onSave, habit, isTask }: Ad
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!parsedFrequency.result) {
+      return
+    }
+
     await onSave({
       name,
       description,
@@ -87,20 +91,18 @@ export default function AddEditHabitModal({ onClose, onSave, habit, isTask }: Ad
       targetCompletions: targetCompletions > 1 ? targetCompletions : undefined,
       completions: habit?.completions || [],
       frequency: getFrequencyUpdate(),
-      userIds: selectedUserIds.length > 0 ? selectedUserIds.concat(currentUser?.id || []) : (currentUser && [currentUser.id]),
       drawing: drawing && drawing !== '[]' ? drawing : undefined
     })
   }
 
   return (
     <>
-      <ModalOverlay />
       <Dialog open={true} onOpenChange={(open) => {
         if (!open && !isDrawingModalOpen) {
           onClose()
         }
-      }} modal={false}>
-        <DialogContent> {/* DialogContent from shadcn/ui is typically z-50, ModalOverlay is z-40 */}
+      }}>
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>
               {habit
@@ -194,23 +196,22 @@ export default function AddEditHabitModal({ onClose, onSave, habit, isTask }: Ad
                 {/* rrule input (habit) */}
                 <div className="col-start-2 col-span-3 text-sm">
                   {(() => {
-                    let displayText = '';
-                    const { result, message } = convertHumanReadableFrequencyToMachineReadable({ text: ruleText, timezone: settings.system.timezone, isRecurring: isRecurRule });
-                    if (message !== errorMessage) { // Only update if it changed to avoid re-renders
-                      setErrorMessage(message);
-                    }
-                    displayText = convertMachineReadableFrequencyToHumanReadable({ frequency: result, isRecurRule, timezone: settings.system.timezone })
+                    const displayText = convertMachineReadableFrequencyToHumanReadable({
+                      frequency: parsedFrequency.result,
+                      isRecurRule,
+                      timezone: settings.system.timezone,
+                    })
 
                     return (
                       <>
-                        <span className={errorMessage ? 'text-destructive' : 'text-muted-foreground'}>
+                        <span className={parsedFrequency.message ? 'text-destructive' : 'text-muted-foreground'}>
                           {displayText}
                         </span>
-                        {errorMessage && (
-                          <p className="text-destructive text-xs mt-1">{errorMessage}</p>
+                        {parsedFrequency.message && (
+                          <p className="text-destructive text-xs mt-1">{parsedFrequency.message}</p>
                         )}
                       </>
-                    );
+                    )
                   })()}
                 </div>
               </div>
@@ -331,41 +332,9 @@ export default function AddEditHabitModal({ onClose, onSave, habit, isTask }: Ad
                   </div>
                 </div>
               </div>
-              {users && users.length > 1 && (
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <div className="flex items-center justify-end gap-2">
-                    <Label htmlFor="sharing-toggle">{t('shareLabel')}</Label>
-                  </div>
-                  <div className="col-span-3">
-                    <div className="flex flex-wrap gap-2">
-                      {users.filter((u) => u.id !== currentUser?.id).map(user => (
-                        <Avatar
-                          key={user.id}
-                          className={`h-8 w-8 border-2 cursor-pointer
-                          ${selectedUserIds.includes(user.id)
-                              ? 'border-primary'
-                              : 'border-muted'
-                            }`}
-                          title={user.username}
-                          onClick={() => {
-                            setSelectedUserIds(prev =>
-                              prev.includes(user.id)
-                                ? prev.filter(id => id !== user.id)
-                                : [...prev, user.id]
-                            )
-                          }}
-                        >
-                          <AvatarImage src={user?.avatarPath && `/api/avatars/${user.avatarPath.split('/').pop()}` || ""} />
-                          <AvatarFallback>{user.username[0]}</AvatarFallback>
-                        </Avatar>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
             <DialogFooter>
-              <Button type="submit" disabled={!!errorMessage}>
+              <Button type="submit" disabled={!parsedFrequency.result}>
                 {habit
                   ? t('saveChangesButton')
                   : t(isTask ? 'addTaskButton' : 'addHabitButton')}
@@ -384,4 +353,3 @@ export default function AddEditHabitModal({ onClose, onSave, habit, isTask }: Ad
     </>
   )
 }
-

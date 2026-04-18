@@ -1,9 +1,9 @@
 'use client'
 
-import { Home, Calendar, Gift, Coins } from 'lucide-react'
+import { Home, Gift, Coins } from 'lucide-react'
 import { useAtom } from 'jotai'
 import { browserSettingsAtom } from '@/lib/atoms'
-import { useEffect, useState, ElementType } from 'react'
+import { ElementType } from 'react'
 import { useTranslations } from 'next-intl'
 import { HabitIcon, TaskIcon } from '@/lib/constants'
 import MobileNavDisplay from './MobileNavDisplay'
@@ -26,7 +26,6 @@ interface NavigationProps {
 
 export default function Navigation({ className, viewPort }: NavigationProps) {
   const t = useTranslations('Navigation')
-  const [isMobileView, setIsMobileView] = useState(false)
   const [browserSettings] = useAtom(browserSettingsAtom)
   const isTasksView = browserSettings.viewType === 'tasks'
 
@@ -38,33 +37,17 @@ export default function Navigation({ className, viewPort }: NavigationProps) {
       href: '/habits',
       position: 'main'
     },
-    { icon: Calendar, label: t('calendar'), href: '/calendar', position: 'main' },
     { icon: Gift, label: t('wishlist'), href: '/wishlist', position: 'main' },
     { icon: Coins, label: t('coins'), href: '/coins', position: 'main' },
   ]
 
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobileView(window.innerWidth < 1024)
-    }
-
-    // Set initial value
-    handleResize()
-
-    // Add event listener
-    window.addEventListener('resize', handleResize)
-
-    // Cleanup
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
-
-  if (viewPort === 'mobile' && isMobileView) {
+  if (viewPort === 'mobile') {
     return <MobileNavDisplay navItems={currentNavItems} />
   }
 
-  if (viewPort === 'main' && !isMobileView) {
+  if (viewPort === 'main') {
     return <DesktopNavDisplay navItems={currentNavItems} className={className} />
   }
 
-  return null // Explicitly return null if no view matches
+  return null
 }

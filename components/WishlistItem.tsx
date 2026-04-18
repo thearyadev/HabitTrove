@@ -1,9 +1,5 @@
-import { WishlistItemType, User } from '@/lib/types'
-import { useAtom } from 'jotai'
+import { WishlistItemType } from '@/lib/types'
 import { useTranslations } from 'next-intl'
-import { usersAtom, currentUserAtom } from '@/lib/atoms'
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
-import { hasPermission } from '@/lib/utils'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Coins, Edit, Trash2, Gift, MoreVertical, Archive, ArchiveRestore } from 'lucide-react'
@@ -29,25 +25,6 @@ interface WishlistItemProps {
   isArchived?: boolean
 }
 
-const renderUserAvatars = (item: WishlistItemType, currentUser: User | null, usersData: { users: User[] }) => {
-  if (!item.userIds || item.userIds.length <= 1) return null;
-
-  return (
-    <div className="flex -space-x-2 ml-2 flex-shrink-0">
-      {item.userIds?.filter((u) => u !== currentUser?.id).map(userId => {
-        const user = usersData.users.find(u => u.id === userId)
-        if (!user) return null
-        return (
-          <Avatar key={user.id} className="h-6 w-6">
-            <AvatarImage src={user?.avatarPath && `/api/avatars/${user.avatarPath.split('/').pop()}` || ""} />
-            <AvatarFallback>{user.username[0]}</AvatarFallback>
-          </Avatar>
-        )
-      })}
-    </div>
-  );
-};
-
 export default function WishlistItem({
   item,
   onEdit,
@@ -60,10 +37,8 @@ export default function WishlistItem({
   isRecentlyRedeemed
 }: WishlistItemProps) {
   const t = useTranslations('WishlistItem')
-  const [currentUser] = useAtom(currentUserAtom)
-  const canWrite = hasPermission(currentUser, 'wishlist', 'write')
-  const canInteract = hasPermission(currentUser, 'wishlist', 'interact')
-  const [usersData] = useAtom(usersAtom)
+  const canWrite = true
+  const canInteract = true
 
 
   return (
@@ -85,7 +60,6 @@ export default function WishlistItem({
               </span>
             )}
           </div>
-          {renderUserAvatars(item, currentUser as User, usersData)}
         </div>
         {(item.description || item.drawing) && (
           <div className={`flex gap-4 mt-2 ${!item.description ? 'justify-end' : ''}`}>

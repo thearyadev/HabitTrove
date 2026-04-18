@@ -1,44 +1,5 @@
 import { RRule } from "rrule"
-import { uuid } from "./utils"
 import { DateTime } from "luxon"
-
-export type UserId = string
-
-export type Permission = {
-  habit: {
-    write: boolean
-    interact: boolean
-  }
-  wishlist: {
-    write: boolean
-    interact: boolean
-  }
-  coins: {
-    write: boolean
-    interact: boolean
-  }
-}
-
-export type SessionUser = {
-  id: UserId
-}
-
-export type SafeUser = SessionUser & {
-  username: string
-  avatarPath?: string
-  permissions?: Permission[]
-  isAdmin?: boolean
-  hasPassword?: boolean
-}
-
-export type User = SafeUser & {
-  password?: string // Optional: Allow users without passwords (e.g., initial setup)
-  lastNotificationReadTimestamp?: string // UTC ISO date string
-}
-
-export type PublicUser = Omit<User, 'password'> & {
-  hasPassword: boolean
-}
 
 export type Habit = {
   id: string
@@ -51,7 +12,6 @@ export type Habit = {
   isTask?: boolean // mark the habit as a task
   archived?: boolean // mark the habit as archived
   pinned?: boolean // mark the habit as pinned
-  userIds?: UserId[]
   drawing?: string // Optional JSON string of drawing data
 }
 
@@ -66,7 +26,6 @@ export type WishlistItemType = {
   archived?: boolean // mark the wishlist item as archived
   targetCompletions?: number // Optional field, infinity when unset
   link?: string // Optional URL to external resource
-  userIds?: UserId[]
   drawing?: string // Optional JSON string of drawing data
 }
 
@@ -80,15 +39,6 @@ export interface CoinTransaction {
   timestamp: string;
   relatedItemId?: string;
   note?: string;
-  userId?: UserId;
-}
-
-export interface UserData {
-  users: User[]
-}
-
-export interface PublicUserData {
-  users: PublicUser[]
 }
 
 export interface HabitsData {
@@ -106,26 +56,6 @@ export interface CoinsData {
 export interface WishlistData {
   items: WishlistItemType[];
 }
-
-// Default value functions
-export const getDefaultUsersData = (): UserData => ({
-  users: [
-    {
-      id: uuid(),
-      username: 'admin',
-      // password: '', // No default password for admin initially? Or set a secure default?
-      isAdmin: true,
-      lastNotificationReadTimestamp: undefined, // Initialize as undefined
-    }
-  ]
-});
-
-export const getDefaultPublicUsersData = (): PublicUserData => ({
-  users: getDefaultUsersData().users.map(({ password, ...user }) => ({
-    ...user,
-    hasPassword: !!password,
-  })),
-});
 
 export const getDefaultHabitsData = (): HabitsData => ({
   habits: []
@@ -149,7 +79,7 @@ export const getDefaultSettings = (): Settings => ({
   system: {
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     weekStartDay: 1, // Monday
-    autoBackupEnabled: true, // Add this line (default to true)
+    autoBackupEnabled: false,
     language: 'en', // Default language
   },
   profile: {}
@@ -165,7 +95,6 @@ export const DATA_DEFAULTS = {
   habits: getDefaultHabitsData,
   coins: getDefaultCoinsData,
   settings: getDefaultSettings,
-  auth: getDefaultUsersData,
 } as const;
 
 // Type for all possible data types
@@ -208,7 +137,6 @@ export interface JotaiHydrateInitialValues {
   coins: CoinsData;
   habits: HabitsData;
   wishlist: WishlistData;
-  users: PublicUserData;
   serverSettings: ServerSettings;
 }
 

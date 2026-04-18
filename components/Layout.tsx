@@ -5,24 +5,22 @@ import PermissionError from './PermissionError'
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-col h-screen bg-gray-100 dark:bg-gray-900 overflow-hidden">
+    <div className="min-h-screen bg-background">
       <ClientWrapper>
-        <Header className="sticky top-0 z-50" />
-        <div className="flex flex-1 overflow-hidden">
+        <Header />
+        <div className="mx-auto flex w-full max-w-screen-2xl gap-0 pb-24 lg:pb-0">
           <Navigation viewPort='main' />
-          <div className="flex-1 flex flex-col">
-            <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 dark:bg-gray-900 relative">
-              {/* responsive container (optimized for mobile) */}
-              <div className="mx-auto px-2 xs:px-4 py-8 max-w-sm xs:max-w-full">
+          <div className="min-w-0 flex-1">
+            <main className="min-h-[calc(100vh-4rem)] px-4 py-6 sm:px-6">
+              <div className="space-y-6">
                 <PermissionError />
                 {children}
               </div>
             </main>
-            <Navigation viewPort='mobile' />
           </div>
         </div>
+        <Navigation viewPort='mobile' />
       </ClientWrapper>
     </div>
   )
 }
-

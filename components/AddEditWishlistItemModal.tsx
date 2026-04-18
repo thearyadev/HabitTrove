@@ -1,8 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useAtom } from 'jotai'
 import { useTranslations } from 'next-intl'
-import { usersAtom, currentUserAtom } from '@/lib/atoms'
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,7 +7,6 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { WishlistItemType } from '@/lib/types'
 import EmojiPickerButton from './EmojiPickerButton'
-import ModalOverlay from './ModalOverlay'
 import DrawingModal from './DrawingModal'
 import DrawingDisplay from './DrawingDisplay'
 import { Brush } from 'lucide-react'
@@ -39,10 +35,7 @@ export default function AddEditWishlistItemModal({
   const [coinCost, setCoinCost] = useState(editingItem?.coinCost || 1)
   const [targetCompletions, setTargetCompletions] = useState<number | undefined>(editingItem?.targetCompletions)
   const [link, setLink] = useState(editingItem?.link || '')
-  const [currentUser] = useAtom(currentUserAtom)
-  const [selectedUserIds, setSelectedUserIds] = useState<string[]>((editingItem?.userIds || []).filter(id => id !== currentUser?.id))
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
-  const [usersData] = useAtom(usersAtom)
   const [drawing, setDrawing] = useState<string>(editingItem?.drawing || '')
   const [isDrawingModalOpen, setIsDrawingModalOpen] = useState(false)
 
@@ -109,7 +102,6 @@ export default function AddEditWishlistItemModal({
       coinCost,
       targetCompletions: targetCompletions || undefined,
       link: link.trim() || undefined,
-      userIds: selectedUserIds.length > 0 ? selectedUserIds.concat(currentUser?.id || []) : (currentUser && [currentUser.id]),
       drawing: drawing && drawing !== '[]' ? drawing : undefined
     }
 
@@ -125,13 +117,12 @@ export default function AddEditWishlistItemModal({
 
   return (
     <>
-      <ModalOverlay />
       <Dialog open={true} onOpenChange={(open) => {
         if (!open && !isDrawingModalOpen) {
           handleClose()
         }
-      }} modal={false}>
-        <DialogContent> {/* DialogContent from shadcn/ui is typically z-50, ModalOverlay is z-40 */}
+      }}>
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingItem ? t('editTitle') : t('addTitle')}</DialogTitle>
           </DialogHeader>
@@ -313,38 +304,6 @@ export default function AddEditWishlistItemModal({
                   </div>
                 </div>
               </div>
-              {usersData.users && usersData.users.length > 1 && (
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <div className="flex items-center justify-end gap-2">
-                    <Label htmlFor="sharing-toggle">{t('shareLabel')}</Label>
-                  </div>
-                  <div className="col-span-3">
-                    <div className="flex flex-wrap gap-2">
-                      {usersData.users.filter((u) => u.id !== currentUser?.id).map(user => (
-                        <Avatar
-                          key={user.id}
-                          className={`h-8 w-8 border-2 cursor-pointer
-                          ${selectedUserIds.includes(user.id)
-                              ? 'border-primary'
-                              : 'border-muted'
-                            }`}
-                          title={user.username}
-                          onClick={() => {
-                            setSelectedUserIds(prev =>
-                              prev.includes(user.id)
-                                ? prev.filter(id => id !== user.id)
-                                : [...prev, user.id]
-                            )
-                          }}
-                        >
-                          <AvatarImage src={user?.avatarPath && `/api/avatars/${user.avatarPath.split('/').pop()}` || ""} />
-                          <AvatarFallback>{user.username[0]}</AvatarFallback>
-                        </Avatar>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
             <DialogFooter>
               <Button type="submit">{editingItem ? t('saveButton') : t('addButton')}</Button>
@@ -362,4 +321,3 @@ export default function AddEditWishlistItemModal({
     </>
   )
 }
-

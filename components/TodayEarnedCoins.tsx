@@ -1,3 +1,5 @@
+'use client'
+
 import { useAtom } from 'jotai'
 import { useTranslations } from 'next-intl'
 import { settingsAtom } from '@/lib/atoms'

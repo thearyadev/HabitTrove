@@ -125,26 +125,25 @@ export default function HabitList() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-xl xs:text-3xl font-bold">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-3xl font-bold tracking-tight">
           {t(isTasksView ? 'myTasks' : 'myHabits')}
         </h1>
-        <span>
-          <Button className="mr-2" onClick={() => setModalConfig({ isOpen: true, isTask: true })}>
+        <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto">
+          <Button className="w-full sm:w-auto" onClick={() => setModalConfig({ isOpen: true, isTask: true })}>
             <Plus className="mr-2 h-4 w-4" /> {t('addTaskButton')}
           </Button>
-          <Button onClick={() => setModalConfig({ isOpen: true, isTask: false })}>
+          <Button className="w-full sm:w-auto" onClick={() => setModalConfig({ isOpen: true, isTask: false })}>
             <Plus className="mr-2 h-4 w-4" /> {t('addHabitButton')}
           </Button>
-        </span>
+        </div>
       </div>
-      <div className='py-4'>
+      <div className="py-2">
         <ViewToggle />
       </div>
 
-      {/* Search and Sort Controls */}
-      <div className="flex flex-col sm:flex-row items-center gap-4 my-4">
-        <div className="relative flex-grow w-full sm:w-auto">
+      <div className="my-4 flex flex-col gap-3">
+        <div className="relative w-full">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search className="h-5 w-5 text-muted-foreground" />
           </div>
@@ -156,10 +155,10 @@ export default function HabitList() {
             className="pl-10 w-full"
           />
         </div>
-        <div className="flex items-center gap-2 self-start sm:self-center w-full sm:w-auto">
-          <Label htmlFor="sort-by" className="text-sm font-medium whitespace-nowrap sr-only sm:not-sr-only">{t('sortByLabel')}</Label>
+        <div className="flex w-full items-center gap-2">
+          <Label htmlFor="sort-by" className="sr-only text-sm font-medium whitespace-nowrap sm:not-sr-only">{t('sortByLabel')}</Label>
           <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortableField)}>
-            <SelectTrigger id="sort-by" className="w-full sm:w-[180px]">
+            <SelectTrigger id="sort-by" className="min-w-0 flex-1 sm:w-[180px] sm:flex-none">
               <SelectValue placeholder={t('sortByLabel')} />
             </SelectTrigger>
             <SelectContent>
@@ -255,4 +254,3 @@ export default function HabitList() {
     </div>
   )
 }
-
