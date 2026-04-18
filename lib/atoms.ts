@@ -20,7 +20,8 @@ import {
   getCompletionsForToday,
   isHabitDue,
   getHabitFreq,
-  roundToInteger
+  roundToInteger,
+  normalizeHabitCompletion,
 } from "@/lib/utils";
 import { atomFamily, atomWithStorage } from "jotai/utils";
 import { DateTime } from "luxon";
@@ -116,8 +117,9 @@ export const completionCacheAtom = atom((get) => {
   const cache: CompletionCache = {};
 
   habits.forEach(habit => {
-    habit.completions.forEach(utcTimestamp => {
-      const localDate = t2d({ timestamp: utcTimestamp, timezone })
+    habit.completions.forEach((completion, index) => {
+      const normalizedCompletion = normalizeHabitCompletion(completion, index)
+      const localDate = t2d({ timestamp: normalizedCompletion.completedAt, timezone })
         .toFormat('yyyy-MM-dd');
 
       if (!cache[localDate]) {

@@ -2,7 +2,7 @@
 
 import HeatMap from '@uiw/react-heat-map'
 import { Habit } from '@/lib/types'
-import { getNow, d2s, t2d } from '@/lib/utils'
+import { getNow, d2s, normalizeHabitCompletion, t2d } from '@/lib/utils'
 import { useAtom } from 'jotai'
 import { settingsAtom } from '@/lib/atoms'
 
@@ -11,12 +11,15 @@ interface HabitHeatmapProps {
 }
 
 export default function HabitHeatmap({ habits }: HabitHeatmapProps) {
+  const [settings] = useAtom(settingsAtom)
+
   // Aggregate all habit completions into a count per day
   const completionCounts = habits.reduce((acc: { [key: string]: number }, habit) => {
     const target = habit.targetCompletions || 1
-    const dailyCompletions = habit.completions.reduce((dailyAcc, completion) => {
+    const dailyCompletions = habit.completions.reduce((dailyAcc, completion, index) => {
+      const normalizedCompletion = normalizeHabitCompletion(completion, index)
       const formattedDate = d2s({
-        dateTime: t2d({ timestamp: completion, timezone: settings.system.timezone }),
+        dateTime: t2d({ timestamp: normalizedCompletion.completedAt, timezone: settings.system.timezone }),
         format: 'yyyy-MM-dd',
         timezone: settings.system.timezone
       })
@@ -37,8 +40,6 @@ export default function HabitHeatmap({ habits }: HabitHeatmapProps) {
     date,
     count
   }))
-
-  const [settings] = useAtom(settingsAtom)
 
   // Get start date (30 days ago)
   const now = getNow({ timezone: settings.system.timezone })

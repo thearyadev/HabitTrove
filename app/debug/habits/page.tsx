@@ -2,6 +2,7 @@
 
 import { habitsAtom, settingsAtom } from "@/lib/atoms";
 import { Habit } from "@/lib/types";
+import { normalizeHabitCompletion } from "@/lib/utils";
 import { useAtom } from "jotai";
 import { DateTime } from "luxon";
 
@@ -22,10 +23,11 @@ export default function DebugPage() {
     const cache: CompletionCache = {};
 
     habits.forEach(habit => {
-      habit.completions.forEach(utcTimestamp => {
+      habit.completions.forEach((completion, index) => {
+        const normalizedCompletion = normalizeHabitCompletion(completion, index)
         // Convert UTC timestamp to local date string in specified timezone
         const localDate = DateTime
-          .fromISO(utcTimestamp)
+          .fromISO(normalizedCompletion.completedAt)
           .setZone(timezone)
           .toFormat('yyyy-MM-dd');
 

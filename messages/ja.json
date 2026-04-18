@@ -48,7 +48,8 @@
     "deleteHabitDialogTitle": "習慣を削除",
     "confirmDeleteDialogMessage": "\"{name}\"を削除してもよろしいですか？この操作は元に戻せません。",
     "deleteButton": "削除",
-    "overdueTooltip": "期限超過"
+    "overdueTooltip": "期限超過",
+    "quantityModeBadge": "Quantity"
   },
   "HabitContextMenuItems": {
     "startPomodoro": "ポモドーロを開始",
@@ -88,7 +89,24 @@
     "shareLabel": "共有",
     "saveChangesButton": "変更を保存",
     "addTaskButton": "タスクを追加",
-    "addHabitButton": "習慣を追加"
+    "addHabitButton": "習慣を追加",
+    "trackingModeLabel": "Tracking",
+    "trackingModeStandard": "Standard",
+    "trackingModeQuantity": "Quantity-based",
+    "quantityUnitLabel": "Unit",
+    "baseRateLabel": "Base rate",
+    "baseUnitLabel": "Per unit",
+    "bonusThresholdLabel": "Bonus threshold",
+    "scaleFactorLabel": "Scale factor",
+    "quantityUnitRequired": "Unit is required for quantity-based habits.",
+    "baseRateInvalid": "Base rate must be greater than 0.",
+    "baseUnitInvalid": "Per unit must be greater than 0.",
+    "bonusThresholdInvalid": "Bonus threshold must be greater than 0.",
+    "scaleFactorInvalid": "Scale factor must be greater than 1.",
+    "quantityPreviewBase": "{baseRate} coins per {baseUnit} {unit}",
+    "quantityPreviewBonus": "Above {threshold} {unit}, reward is multiplied by {scaleFactor}.",
+    "quantityPreviewExamples": "{threshold} earns {thresholdCoins} coins, {bonusQuantity} earns {bonusCoins} coins.",
+    "quantityUnitPlaceholder": "unit"
   },
   "ConfirmDialog": {
     "confirmButton": "確認",
@@ -239,7 +257,11 @@
     "selectDatePrompt": "日付を選択",
     "tasksSectionTitle": "タスク",
     "habitsSectionTitle": "習慣",
-    "errorCompletingPastHabit": "過去の習慣を完了する際にエラーが発生しました:"
+    "errorCompletingPastHabit": "過去の習慣を完了する際にエラーが発生しました:",
+    "calendarCardDescription": "Select a date to review tasks and habits.",
+    "selectedDateDescription": "Mark completions directly from the selected day.",
+    "emptyStateText": "Nothing scheduled for this date.",
+    "quantityDisabledText": "Log from the habits view"
   },
   "NotificationDropdown": {
     "notLoggedIn": "ログインしていません。",
@@ -322,7 +344,12 @@
     "completeButtonCount": "完了（{completed}/{target}）",
     "completeButtonCountMobile": "{completed}/{target}",
     "undoButton": "取り消し",
-    "editButton": "編集"
+    "editButton": "編集",
+    "coinsPerQuantity": "{baseRate} coins / {unit}",
+    "quantityBonusHint": "Above {threshold} {unit}, reward scales by {scaleFactor}x.",
+    "logButton": "Log",
+    "logButtonCount": "Log ({completed}/{target})",
+    "logButtonCountMobile": "{completed}/{target}"
   },
   "TransactionNoteEditor": {
     "noteTooLongTitle": "メモが長すぎます",
@@ -414,7 +441,13 @@
     "alreadyCompletedPastDateTitle": "既に完了しています",
     "alreadyCompletedPastDateDescription": "この習慣は{dateKey}に既に完了しています。",
     "earnedCoinsPastDateDescription": "{dateKey}に{coinReward}コインを獲得しました。",
-    "progressPastDateDescription": "{dateKey}に{count}/{target}回完了しました。"
+    "progressPastDateDescription": "{dateKey}に{count}/{target}回完了しました。",
+    "quantityRequiredTitle": "Quantity required",
+    "quantityRequiredDescription": "Enter a quantity to log this habit.",
+    "earnedQuantityCoinsDescription": "Logged {quantity} {unit} and earned {coinReward} coins.",
+    "quantityCompletionUndoneDescription": "Quantity entry removed. You have {count}/{target} completions today.",
+    "quantityBackfillDisabledTitle": "Log from habits view",
+    "quantityBackfillDisabledDescription": "Quantity-based habits can only be logged from the main habits view."
   },
   "useWishlist": {
     "redemptionLimitReachedTitle": "使用回数制限に達しました",
@@ -434,8 +467,6 @@
     "invalidAmountDescription": "有効な正の数を入力してください",
     "successTitle": "成功しました",
     "transactionNotFoundDescription": "取引が見つかりません",
-    "maxAmountExceededDescription": "金額は{max}を超えることはできません。",
-    "transactionNotFoundDescription": "取引が見つかりません",
     "maxAmountExceededDescription": "金額は{max}を超えることはできません。"
   },
   "DrawingModal": {
@@ -445,5 +476,16 @@
     "clearButton": "クリア",
     "saveDrawingButton": "描画を保存",
     "cancelButton": "キャンセル"
+  },
+  "LogHabitCompletionModal": {
+    "title": "Log {habitName}",
+    "description": "{baseRate} coins per {baseUnit} {unit}",
+    "bonusRule": "Above {threshold} {unit}, reward is multiplied by {scaleFactor}.",
+    "quantityLabel": "Quantity ({unit})",
+    "quantityPlaceholder": "Enter amount",
+    "estimatedRewardLabel": "Estimated reward",
+    "estimatedRewardValue": "{coins} coins",
+    "cancelButton": "Cancel",
+    "submitButton": "Log activity"
   }
 }

@@ -5,7 +5,7 @@ import { Calendar } from '@/components/ui/calendar'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import CompletionCountBadge from '@/components/CompletionCountBadge'
 import { Circle, CircleCheck } from 'lucide-react'
-import { d2s, getNow, isHabitDue, getISODate, getCompletionsForDate } from '@/lib/utils'
+import { d2s, getNow, isHabitDue, getISODate, getCompletionsForDate, isQuantityHabit } from '@/lib/utils'
 import { useAtom } from 'jotai'
 import { useTranslations } from 'next-intl'
 import { useHabits } from '@/hooks/useHabits'
@@ -27,14 +27,16 @@ function CompletionButton({
   isCompleted: boolean
   onComplete: () => void
 }) {
+  const quantityHabit = isQuantityHabit(habit)
+
   return (
     <Button
       variant="ghost"
       size="icon"
       onClick={onComplete}
-      disabled={isCompleted}
+      disabled={isCompleted || quantityHabit}
       className="h-8 w-8 rounded-md"
-      aria-label={`Complete ${habit.name}`}
+      aria-label={quantityHabit ? `Log ${habit.name} from habits view` : `Complete ${habit.name}`}
     >
       {isCompleted ? (
         <CircleCheck className="h-4 w-4 text-emerald-600" />
@@ -66,6 +68,8 @@ function HabitListSection({
   timezone,
   selectedDateTime,
   onComplete,
+  emptyStateText,
+  quantityDisabledText,
 }: {
   title: string
   badgeType: 'tasks' | 'habits'
@@ -74,6 +78,8 @@ function HabitListSection({
   timezone: string
   selectedDateTime: DateTime
   onComplete: (habit: Habit) => void
+  emptyStateText: string
+  quantityDisabledText: string
 }) {
   return (
     <div className="space-y-3">
@@ -83,7 +89,7 @@ function HabitListSection({
       </div>
       {items.length === 0 ? (
         <div className="rounded-md border border-dashed px-3 py-6 text-sm text-muted-foreground">
-          Nothing scheduled for this date.
+          {emptyStateText}
         </div>
       ) : (
         <div className="rounded-lg border">
@@ -101,6 +107,11 @@ function HabitListSection({
                     {habit.targetCompletions ? (
                       <p className="text-xs text-muted-foreground">
                         {completions}/{habit.targetCompletions} completions
+                      </p>
+                    ) : null}
+                    {isQuantityHabit(habit) ? (
+                      <p className="text-xs text-muted-foreground">
+                        {quantityDisabledText}
                       </p>
                     ) : null}
                   </div>
@@ -169,7 +180,7 @@ export default function HabitCalendar() {
         <Card className="self-start">
           <CardHeader>
             <CardTitle>{t('calendarCardTitle')}</CardTitle>
-            <CardDescription>Select a date to review tasks and habits.</CardDescription>
+            <CardDescription>{t('calendarCardDescription')}</CardDescription>
           </CardHeader>
           <CardContent>
             <Calendar
@@ -203,7 +214,7 @@ export default function HabitCalendar() {
               )}
             </CardTitle>
             <CardDescription>
-              Mark completions directly from the selected day.
+              {t('selectedDateDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent className="max-h-[520px] overflow-y-auto">
@@ -219,6 +230,8 @@ export default function HabitCalendar() {
                       timezone={settings.system.timezone}
                       selectedDateTime={selectedDateTime}
                       onComplete={(habit) => handleCompletePastHabit(habit, selectedDateTime)}
+                      emptyStateText={t('emptyStateText')}
+                      quantityDisabledText={t('quantityDisabledText')}
                     />
                     <Separator />
                   </>
@@ -231,6 +244,8 @@ export default function HabitCalendar() {
                   timezone={settings.system.timezone}
                   selectedDateTime={selectedDateTime}
                   onComplete={(habit) => handleCompletePastHabit(habit, selectedDateTime)}
+                  emptyStateText={t('emptyStateText')}
+                  quantityDisabledText={t('quantityDisabledText')}
                 />
               </div>
             )}

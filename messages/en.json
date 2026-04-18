@@ -48,7 +48,8 @@
     "deleteHabitDialogTitle": "Delete Habit",
     "confirmDeleteDialogMessage": "Are you sure you want to delete \"{name}\"? This action cannot be undone.",
     "deleteButton": "Delete",
-    "overdueTooltip": "Overdue"
+    "overdueTooltip": "Overdue",
+    "quantityModeBadge": "Quantity"
   },
   "HabitContextMenuItems": {
     "startPomodoro": "Start Pomodoro",
@@ -96,7 +97,24 @@
     "shareLabel": "Share",
     "saveChangesButton": "Save Changes",
     "addTaskButton": "Add Task",
-    "addHabitButton": "Add Habit"
+    "addHabitButton": "Add Habit",
+    "trackingModeLabel": "Tracking",
+    "trackingModeStandard": "Standard",
+    "trackingModeQuantity": "Quantity-based",
+    "quantityUnitLabel": "Unit",
+    "baseRateLabel": "Base rate",
+    "baseUnitLabel": "Per unit",
+    "bonusThresholdLabel": "Bonus threshold",
+    "scaleFactorLabel": "Scale factor",
+    "quantityUnitRequired": "Unit is required for quantity-based habits.",
+    "baseRateInvalid": "Base rate must be greater than 0.",
+    "baseUnitInvalid": "Per unit must be greater than 0.",
+    "bonusThresholdInvalid": "Bonus threshold must be greater than 0.",
+    "scaleFactorInvalid": "Scale factor must be greater than 1.",
+    "quantityPreviewBase": "{baseRate} coins per {baseUnit} {unit}",
+    "quantityPreviewBonus": "Above {threshold} {unit}, reward is multiplied by {scaleFactor}.",
+    "quantityPreviewExamples": "{threshold} earns {thresholdCoins} coins, {bonusQuantity} earns {bonusCoins} coins.",
+    "quantityUnitPlaceholder": "unit"
   },
   "ConfirmDialog": {
     "confirmButton": "Confirm",
@@ -247,7 +265,11 @@
     "selectDatePrompt": "Select a date",
     "tasksSectionTitle": "Tasks",
     "habitsSectionTitle": "Habits",
-    "errorCompletingPastHabit": "Error completing past habit:"
+    "errorCompletingPastHabit": "Error completing past habit:",
+    "calendarCardDescription": "Select a date to review tasks and habits.",
+    "selectedDateDescription": "Mark completions directly from the selected day.",
+    "emptyStateText": "Nothing scheduled for this date.",
+    "quantityDisabledText": "Log from the habits view"
   },
   "NotificationDropdown": {
     "notLoggedIn": "Not logged in.",
@@ -330,7 +352,12 @@
     "completeButtonCount": "Complete ({completed}/{target})",
     "completeButtonCountMobile": "{completed}/{target}",
     "undoButton": "Undo",
-    "editButton": "Edit"
+    "editButton": "Edit",
+    "coinsPerQuantity": "{baseRate} coins / {unit}",
+    "quantityBonusHint": "Above {threshold} {unit}, reward scales by {scaleFactor}x.",
+    "logButton": "Log",
+    "logButtonCount": "Log ({completed}/{target})",
+    "logButtonCountMobile": "{completed}/{target}"
   },
   "TransactionNoteEditor": {
     "noteTooLongTitle": "Note too long",
@@ -422,7 +449,13 @@
     "alreadyCompletedPastDateTitle": "Already completed",
     "alreadyCompletedPastDateDescription": "This habit was already completed on {dateKey}.",
     "earnedCoinsPastDateDescription": "You earned {coinReward} coins for {dateKey}.",
-    "progressPastDateDescription": "You've completed {count}/{target} times on {dateKey}."
+    "progressPastDateDescription": "You've completed {count}/{target} times on {dateKey}.",
+    "quantityRequiredTitle": "Quantity required",
+    "quantityRequiredDescription": "Enter a quantity to log this habit.",
+    "earnedQuantityCoinsDescription": "Logged {quantity} {unit} and earned {coinReward} coins.",
+    "quantityCompletionUndoneDescription": "Quantity entry removed. You have {count}/{target} completions today.",
+    "quantityBackfillDisabledTitle": "Log from habits view",
+    "quantityBackfillDisabledDescription": "Quantity-based habits can only be logged from the main habits view."
   },
   "useWishlist": {
     "redemptionLimitReachedTitle": "Redemption limit reached",
@@ -438,12 +471,21 @@
     "invalidAmountDescription": "Please enter a valid positive number",
     "successTitle": "Success",
     "transactionNotFoundDescription": "Transaction not found",
-    "maxAmountExceededDescription": "The amount cannot exceed {max}.",
-    "transactionNotFoundDescription": "Transaction not found",
     "maxAmountExceededDescription": "The amount cannot exceed {max}."
   },
   "Warning": {
     "areYouSure": "Are you sure?",
     "cancel": "Cancel"
+  },
+  "LogHabitCompletionModal": {
+    "title": "Log {habitName}",
+    "description": "{baseRate} coins per {baseUnit} {unit}",
+    "bonusRule": "Above {threshold} {unit}, reward is multiplied by {scaleFactor}.",
+    "quantityLabel": "Quantity ({unit})",
+    "quantityPlaceholder": "Enter amount",
+    "estimatedRewardLabel": "Estimated reward",
+    "estimatedRewardValue": "{coins} coins",
+    "cancelButton": "Cancel",
+    "submitButton": "Log activity"
   }
 }

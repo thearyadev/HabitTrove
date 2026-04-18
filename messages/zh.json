@@ -48,7 +48,8 @@
     "deleteHabitDialogTitle": "删除习惯",
     "confirmDeleteDialogMessage": "确定要删除\"{name}\"吗？此操作无法撤消。",
     "deleteButton": "删除",
-    "overdueTooltip": "逾期"
+    "overdueTooltip": "逾期",
+    "quantityModeBadge": "Quantity"
   },
   "HabitContextMenuItems": {
     "startPomodoro": "开始番茄钟",
@@ -88,7 +89,24 @@
     "shareLabel": "分享",
     "saveChangesButton": "保存更改",
     "addTaskButton": "添加任务",
-    "addHabitButton": "添加习惯"
+    "addHabitButton": "添加习惯",
+    "trackingModeLabel": "Tracking",
+    "trackingModeStandard": "Standard",
+    "trackingModeQuantity": "Quantity-based",
+    "quantityUnitLabel": "Unit",
+    "baseRateLabel": "Base rate",
+    "baseUnitLabel": "Per unit",
+    "bonusThresholdLabel": "Bonus threshold",
+    "scaleFactorLabel": "Scale factor",
+    "quantityUnitRequired": "Unit is required for quantity-based habits.",
+    "baseRateInvalid": "Base rate must be greater than 0.",
+    "baseUnitInvalid": "Per unit must be greater than 0.",
+    "bonusThresholdInvalid": "Bonus threshold must be greater than 0.",
+    "scaleFactorInvalid": "Scale factor must be greater than 1.",
+    "quantityPreviewBase": "{baseRate} coins per {baseUnit} {unit}",
+    "quantityPreviewBonus": "Above {threshold} {unit}, reward is multiplied by {scaleFactor}.",
+    "quantityPreviewExamples": "{threshold} earns {thresholdCoins} coins, {bonusQuantity} earns {bonusCoins} coins.",
+    "quantityUnitPlaceholder": "unit"
   },
   "ConfirmDialog": {
     "confirmButton": "确认",
@@ -239,7 +257,11 @@
     "selectDatePrompt": "选择一个日期",
     "tasksSectionTitle": "任务",
     "habitsSectionTitle": "习惯",
-    "errorCompletingPastHabit": "完成过去习惯时出错:"
+    "errorCompletingPastHabit": "完成过去习惯时出错:",
+    "calendarCardDescription": "Select a date to review tasks and habits.",
+    "selectedDateDescription": "Mark completions directly from the selected day.",
+    "emptyStateText": "Nothing scheduled for this date.",
+    "quantityDisabledText": "Log from the habits view"
   },
   "NotificationDropdown": {
     "notLoggedIn": "未登录。",
@@ -322,7 +344,12 @@
     "completeButtonCount": "完成 ({completed}/{target})",
     "completeButtonCountMobile": "{completed}/{target}",
     "undoButton": "撤销",
-    "editButton": "编辑"
+    "editButton": "编辑",
+    "coinsPerQuantity": "{baseRate} coins / {unit}",
+    "quantityBonusHint": "Above {threshold} {unit}, reward scales by {scaleFactor}x.",
+    "logButton": "Log",
+    "logButtonCount": "Log ({completed}/{target})",
+    "logButtonCountMobile": "{completed}/{target}"
   },
   "TransactionNoteEditor": {
     "noteTooLongTitle": "备注太长",
@@ -414,7 +441,13 @@
     "alreadyCompletedPastDateTitle": "已完成",
     "alreadyCompletedPastDateDescription": "这个习惯已于{dateKey}完成。",
     "earnedCoinsPastDateDescription": "您因{dateKey}获得了{coinReward}金币。",
-    "progressPastDateDescription": "您于{dateKey}完成了{count}/{target}次。"
+    "progressPastDateDescription": "您于{dateKey}完成了{count}/{target}次。",
+    "quantityRequiredTitle": "Quantity required",
+    "quantityRequiredDescription": "Enter a quantity to log this habit.",
+    "earnedQuantityCoinsDescription": "Logged {quantity} {unit} and earned {coinReward} coins.",
+    "quantityCompletionUndoneDescription": "Quantity entry removed. You have {count}/{target} completions today.",
+    "quantityBackfillDisabledTitle": "Log from habits view",
+    "quantityBackfillDisabledDescription": "Quantity-based habits can only be logged from the main habits view."
   },
   "useWishlist": {
     "redemptionLimitReachedTitle": "达到兑换限制",
@@ -434,8 +467,6 @@
     "invalidAmountDescription": "请输入有效的正数",
     "successTitle": "成功",
     "transactionNotFoundDescription": "未找到交易记录",
-    "maxAmountExceededDescription": "金额不能超过 {max}。",
-    "transactionNotFoundDescription": "未找到交易记录",
     "maxAmountExceededDescription": "金额不能超过 {max}。"
   },
   "DrawingModal": {
@@ -445,5 +476,16 @@
     "clearButton": "清除",
     "saveDrawingButton": "保存绘图",
     "cancelButton": "取消"
+  },
+  "LogHabitCompletionModal": {
+    "title": "Log {habitName}",
+    "description": "{baseRate} coins per {baseUnit} {unit}",
+    "bonusRule": "Above {threshold} {unit}, reward is multiplied by {scaleFactor}.",
+    "quantityLabel": "Quantity ({unit})",
+    "quantityPlaceholder": "Enter amount",
+    "estimatedRewardLabel": "Estimated reward",
+    "estimatedRewardValue": "{coins} coins",
+    "cancelButton": "Cancel",
+    "submitButton": "Log activity"
   }
 }

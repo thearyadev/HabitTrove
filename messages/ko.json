@@ -48,7 +48,8 @@
     "deleteHabitDialogTitle": "습관 삭제",
     "confirmDeleteDialogMessage": "정말로 \"{name}\"을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
     "deleteButton": "삭제",
-    "overdueTooltip": "기한이 지남"
+    "overdueTooltip": "기한이 지남",
+    "quantityModeBadge": "Quantity"
   },
   "HabitContextMenuItems": {
     "startPomodoro": "뽀모도로 시작",
@@ -88,7 +89,24 @@
     "shareLabel": "공유",
     "saveChangesButton": "변경 사항 저장",
     "addTaskButton": "할 일 추가",
-    "addHabitButton": "습관 추가"
+    "addHabitButton": "습관 추가",
+    "trackingModeLabel": "Tracking",
+    "trackingModeStandard": "Standard",
+    "trackingModeQuantity": "Quantity-based",
+    "quantityUnitLabel": "Unit",
+    "baseRateLabel": "Base rate",
+    "baseUnitLabel": "Per unit",
+    "bonusThresholdLabel": "Bonus threshold",
+    "scaleFactorLabel": "Scale factor",
+    "quantityUnitRequired": "Unit is required for quantity-based habits.",
+    "baseRateInvalid": "Base rate must be greater than 0.",
+    "baseUnitInvalid": "Per unit must be greater than 0.",
+    "bonusThresholdInvalid": "Bonus threshold must be greater than 0.",
+    "scaleFactorInvalid": "Scale factor must be greater than 1.",
+    "quantityPreviewBase": "{baseRate} coins per {baseUnit} {unit}",
+    "quantityPreviewBonus": "Above {threshold} {unit}, reward is multiplied by {scaleFactor}.",
+    "quantityPreviewExamples": "{threshold} earns {thresholdCoins} coins, {bonusQuantity} earns {bonusCoins} coins.",
+    "quantityUnitPlaceholder": "unit"
   },
   "ConfirmDialog": {
     "confirmButton": "확인",
@@ -239,7 +257,11 @@
     "selectDatePrompt": "날짜 선택",
     "tasksSectionTitle": "할 일",
     "habitsSectionTitle": "습관",
-    "errorCompletingPastHabit": "과거 습관 완료 오류:"
+    "errorCompletingPastHabit": "과거 습관 완료 오류:",
+    "calendarCardDescription": "Select a date to review tasks and habits.",
+    "selectedDateDescription": "Mark completions directly from the selected day.",
+    "emptyStateText": "Nothing scheduled for this date.",
+    "quantityDisabledText": "Log from the habits view"
   },
   "NotificationDropdown": {
     "notLoggedIn": "로그인되지 않았습니다.",
@@ -322,7 +344,12 @@
     "completeButtonCount": "완료 ({completed}/{target})",
     "completeButtonCountMobile": "{completed}/{target}",
     "undoButton": "실행 취소",
-    "editButton": "수정"
+    "editButton": "수정",
+    "coinsPerQuantity": "{baseRate} coins / {unit}",
+    "quantityBonusHint": "Above {threshold} {unit}, reward scales by {scaleFactor}x.",
+    "logButton": "Log",
+    "logButtonCount": "Log ({completed}/{target})",
+    "logButtonCountMobile": "{completed}/{target}"
   },
   "TransactionNoteEditor": {
     "noteTooLongTitle": "메모가 너무 깁니다",
@@ -414,7 +441,13 @@
     "alreadyCompletedPastDateTitle": "이미 완료됨",
     "alreadyCompletedPastDateDescription": "이 습관은 {dateKey}에 이미 완료되었습니다.",
     "earnedCoinsPastDateDescription": "{dateKey}에 {coinReward} 코인을 획득했습니다.",
-    "progressPastDateDescription": "{dateKey}에 {count}/{target}회 완료했습니다."
+    "progressPastDateDescription": "{dateKey}에 {count}/{target}회 완료했습니다.",
+    "quantityRequiredTitle": "Quantity required",
+    "quantityRequiredDescription": "Enter a quantity to log this habit.",
+    "earnedQuantityCoinsDescription": "Logged {quantity} {unit} and earned {coinReward} coins.",
+    "quantityCompletionUndoneDescription": "Quantity entry removed. You have {count}/{target} completions today.",
+    "quantityBackfillDisabledTitle": "Log from habits view",
+    "quantityBackfillDisabledDescription": "Quantity-based habits can only be logged from the main habits view."
   },
   "useWishlist": {
     "redemptionLimitReachedTitle": "교환 한도 도달",
@@ -430,8 +463,6 @@
     "invalidAmountDescription": "유효한 양의 숫자를 입력하세요",
     "successTitle": "성공",
     "transactionNotFoundDescription": "거래를 찾을 수 없습니다",
-    "maxAmountExceededDescription": "금액은 {max}을(를) 초과할 수 없습니다.",
-    "transactionNotFoundDescription": "거래를 찾을 수 없습니다",
     "maxAmountExceededDescription": "금액은 {max}을(를) 초과할 수 없습니다."
   },
   "Warning": {
@@ -445,5 +476,16 @@
     "clearButton": "지우기",
     "saveDrawingButton": "그림 저장",
     "cancelButton": "취소"
+  },
+  "LogHabitCompletionModal": {
+    "title": "Log {habitName}",
+    "description": "{baseRate} coins per {baseUnit} {unit}",
+    "bonusRule": "Above {threshold} {unit}, reward is multiplied by {scaleFactor}.",
+    "quantityLabel": "Quantity ({unit})",
+    "quantityPlaceholder": "Enter amount",
+    "estimatedRewardLabel": "Estimated reward",
+    "estimatedRewardValue": "{coins} coins",
+    "cancelButton": "Cancel",
+    "submitButton": "Log activity"
   }
 }
