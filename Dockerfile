@@ -1,30 +1,28 @@
 # syntax=docker/dockerfile:1
 
-FROM --platform=$BUILDPLATFORM node:25-bookworm-slim AS base
+FROM --platform=$BUILDPLATFORM node:25-alpine AS deps
 
 ENV NEXT_TELEMETRY_DISABLED=1
 WORKDIR /app
 
-FROM base AS deps
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends build-essential python3 ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache build-base python3
 
 COPY package.json package-lock.json ./
-RUN --mount=type=cache,target=/root/.npm npm ci
+RUN --mount=type=cache,target=/root/.npm,id=npm-ci,sharing=locked npm ci
 
-FROM base AS builder
-COPY --from=deps /app/node_modules ./node_modules
+FROM deps AS builder
+
 COPY . .
-RUN --mount=type=cache,target=/app/.next/cache npm run build
+RUN --mount=type=cache,target=/app/.next/cache,sharing=locked npm run build
 
-FROM node:25-bookworm-slim AS runner
+FROM node:25-alpine AS runner
+
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 WORKDIR /app
 
-RUN groupadd --system --gid 1001 nodejs \
-  && useradd --system --uid 1001 --gid 1001 nextjs \
+RUN addgroup --system --gid 1001 nodejs \
+  && adduser --system --uid 1001 --ingroup nodejs nextjs \
   && mkdir -p /app/data /app/backups \
   && chown -R nextjs:nodejs /app/data /app/backups
 
