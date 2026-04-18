@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 3
+export const SCHEMA_VERSION = 4
 
 export const SCHEMA_SQL = `
   CREATE TABLE IF NOT EXISTS app_settings (
@@ -28,7 +28,8 @@ export const SCHEMA_SQL = `
     archived INTEGER NOT NULL DEFAULT 0,
     pinned INTEGER NOT NULL DEFAULT 0,
     drawing TEXT,
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    deleted_at TEXT
   );
 
   CREATE TABLE IF NOT EXISTS habit_completions (
@@ -49,7 +50,8 @@ export const SCHEMA_SQL = `
     target_completions INTEGER,
     link TEXT,
     drawing TEXT,
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    deleted_at TEXT
   );
 
   CREATE TABLE IF NOT EXISTS coin_transactions (
@@ -64,6 +66,10 @@ export const SCHEMA_SQL = `
 
   CREATE INDEX IF NOT EXISTS idx_habit_completions_habit_id
     ON habit_completions(habit_id);
+  CREATE INDEX IF NOT EXISTS idx_habits_deleted_at
+    ON habits(deleted_at);
+  CREATE INDEX IF NOT EXISTS idx_wishlist_items_deleted_at
+    ON wishlist_items(deleted_at);
   CREATE INDEX IF NOT EXISTS idx_coin_transactions_timestamp
     ON coin_transactions(timestamp DESC);
 `
