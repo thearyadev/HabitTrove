@@ -2,7 +2,7 @@ import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { DateTime, DateTimeFormatOptions } from "luxon"
 import { datetime, RRule } from 'rrule'
-import { Freq, Habit, CoinTransaction, ParsedFrequencyResult, ParsedResultType, Settings, HabitsData, CoinsData, WishlistData } from '@/lib/types'
+import { Freq, Habit, HabitCompletion, CoinTransaction, ParsedFrequencyResult, ParsedResultType, Settings, HabitsData, CoinsData, WishlistData } from '@/lib/types'
 import { DUE_MAP, INITIAL_DUE, RECURRENCE_RULE_MAP } from "./constants"
 import * as chrono from 'chrono-node'
 import { v4 as uuidv4 } from 'uuid'
@@ -21,6 +21,10 @@ export function getTodayInTimezone(timezone: string): string {
 // round a number to the nearest integer
 export function roundToInteger(value: number): number {
   return Math.round(value);
+}
+
+export function formatDecimal(value: number): string {
+  return Number.isInteger(value) ? value.toString() : value.toFixed(2).replace(/\.?0+$/, '')
 }
 
 export function getISODate({ dateTime, timezone }: { dateTime: DateTime, timezone: string }): string {
@@ -84,6 +88,50 @@ export function normalizeCompletionDate(date: string, timezone: string): string 
   return DateTime.fromFormat(date, 'yyyy-MM-dd', { zone: timezone }).toUTC().toISO()!;
 }
 
+export function normalizeHabitCompletion(
+  completion: HabitCompletion | string,
+  index = 0
+): HabitCompletion {
+  if (typeof completion === 'string') {
+    return {
+      id: `legacy-${completion}-${index}`,
+      completedAt: completion,
+    }
+  }
+
+  return completion
+}
+
+export function getCompletionRecordsForDate({
+  habit,
+  date,
+  timezone
+}: {
+  habit: Habit,
+  date: DateTime | string,
+  timezone: string
+}): HabitCompletion[] {
+  const dateObj = typeof date === 'string' ? DateTime.fromISO(date) : date
+
+  return habit.completions
+    .map((completion, index) => normalizeHabitCompletion(completion, index))
+    .filter((completion) =>
+      isSameDate(t2d({ timestamp: completion.completedAt, timezone }), dateObj)
+    )
+}
+
+export function getCompletionCountForDate({
+  habit,
+  date,
+  timezone
+}: {
+  habit: Habit,
+  date: DateTime | string,
+  timezone: string
+}): number {
+  return getCompletionRecordsForDate({ habit, date, timezone }).length
+}
+
 export function getCompletionsForDate({
   habit,
   date,
@@ -93,10 +141,7 @@ export function getCompletionsForDate({
   date: DateTime | string,
   timezone: string
 }): number {
-  const dateObj = typeof date === 'string' ? DateTime.fromISO(date) : date
-  return habit.completions.filter((completion: string) =>
-    isSameDate(t2d({ timestamp: completion, timezone }), dateObj)
-  ).length
+  return getCompletionCountForDate({ habit, date, timezone })
 }
 
 export function getCompletionsForToday({
@@ -106,7 +151,43 @@ export function getCompletionsForToday({
   habit: Habit,
   timezone: string
 }): number {
-  return getCompletionsForDate({ habit, date: getTodayInTimezone(timezone), timezone })
+  return getCompletionCountForDate({ habit, date: getTodayInTimezone(timezone), timezone })
+}
+
+export function getTotalQuantityForDate({
+  habit,
+  date,
+  timezone
+}: {
+  habit: Habit,
+  date: DateTime | string,
+  timezone: string
+}): number {
+  return getCompletionRecordsForDate({ habit, date, timezone })
+    .reduce((sum, completion) => sum + (completion.quantity ?? 0), 0)
+}
+
+export function isQuantityHabit(habit: Habit): boolean {
+  return habit.trackingMode === 'quantity'
+}
+
+export function calculateQuantityHabitCoins(habit: Habit, quantity: number): number {
+  if (!isQuantityHabit(habit)) {
+    return habit.coinReward
+  }
+
+  const baseRate = habit.baseRate ?? 0
+  const baseUnit = habit.baseUnit ?? 1
+  const bonusThreshold = habit.bonusThreshold ?? Number.POSITIVE_INFINITY
+  const scaleFactor = habit.scaleFactor ?? 1
+  const baseCoins = (quantity / baseUnit) * baseRate
+  const coins = quantity > bonusThreshold ? baseCoins * scaleFactor : baseCoins
+
+  return roundToInteger(coins)
+}
+
+export function getHabitRewardValue(habit: Habit): number {
+  return isQuantityHabit(habit) ? habit.baseRate ?? 0 : habit.coinReward
 }
 
 export function getCompletedHabitsForDate({

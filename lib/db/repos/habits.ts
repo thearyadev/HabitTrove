@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto'
 import { getDatabase, withTransaction } from '@/lib/db/client'
-import { Habit, HabitsData } from '@/lib/types'
+import { Habit, HabitCompletion, HabitsData } from '@/lib/types'
 
 type HabitRow = {
   id: string
@@ -8,6 +8,12 @@ type HabitRow = {
   description: string
   frequency: string
   coin_reward: number
+  tracking_mode: 'standard' | 'quantity'
+  quantity_unit: string | null
+  base_rate: number | null
+  base_unit: number | null
+  bonus_threshold: number | null
+  scale_factor: number | null
   target_completions: number | null
   is_task: number
   archived: number
@@ -16,12 +22,15 @@ type HabitRow = {
 }
 
 type CompletionRow = {
+  id: string
   habit_id: string
   completed_at: string
+  quantity: number | null
+  coins_awarded: number | null
 }
 
 function getCompletionMap(habitIds: string[]) {
-  const map = new Map<string, string[]>()
+  const map = new Map<string, HabitCompletion[]>()
 
   if (habitIds.length === 0) {
     return map
@@ -30,7 +39,7 @@ function getCompletionMap(habitIds: string[]) {
   const db = getDatabase()
   const placeholders = habitIds.map(() => '?').join(', ')
   const rows = db.prepare(`
-    SELECT habit_id, completed_at
+    SELECT id, habit_id, completed_at, quantity, coins_awarded
     FROM habit_completions
     WHERE habit_id IN (${placeholders})
     ORDER BY completed_at ASC
@@ -38,7 +47,12 @@ function getCompletionMap(habitIds: string[]) {
 
   for (const row of rows) {
     const current = map.get(row.habit_id) ?? []
-    current.push(row.completed_at)
+    current.push({
+      id: row.id,
+      completedAt: row.completed_at,
+      quantity: row.quantity ?? undefined,
+      coinsAwarded: row.coins_awarded ?? undefined,
+    })
     map.set(row.habit_id, current)
   }
 
@@ -54,6 +68,12 @@ function hydrateHabits(rows: HabitRow[]): Habit[] {
     description: row.description,
     frequency: row.frequency,
     coinReward: row.coin_reward,
+    trackingMode: row.tracking_mode,
+    quantityUnit: row.quantity_unit ?? undefined,
+    baseRate: row.base_rate ?? undefined,
+    baseUnit: row.base_unit ?? undefined,
+    bonusThreshold: row.bonus_threshold ?? undefined,
+    scaleFactor: row.scale_factor ?? undefined,
     targetCompletions: row.target_completions ?? undefined,
     completions: completionMap.get(row.id) ?? [],
     isTask: row.is_task === 1,
@@ -63,23 +83,45 @@ function hydrateHabits(rows: HabitRow[]): Habit[] {
   }))
 }
 
-function replaceCompletions(habitId: string, completions: string[]) {
+function replaceCompletions(habitId: string, completions: HabitCompletion[]) {
   const db = getDatabase()
   db.prepare('DELETE FROM habit_completions WHERE habit_id = ?').run(habitId)
   const insert = db.prepare(`
-    INSERT INTO habit_completions (id, habit_id, completed_at)
-    VALUES (?, ?, ?)
+    INSERT INTO habit_completions (id, habit_id, completed_at, quantity, coins_awarded)
+    VALUES (?, ?, ?, ?, ?)
   `)
 
   for (const completion of completions) {
-    insert.run(randomUUID(), habitId, completion)
+    insert.run(
+      completion.id || randomUUID(),
+      habitId,
+      completion.completedAt,
+      completion.quantity ?? null,
+      completion.coinsAwarded ?? null
+    )
   }
 }
 
 export function getHabits(): HabitsData {
   const db = getDatabase()
   const rows = db.prepare(`
-    SELECT id, name, description, frequency, coin_reward, target_completions, is_task, archived, pinned, drawing
+    SELECT
+      id,
+      name,
+      description,
+      frequency,
+      coin_reward,
+      tracking_mode,
+      quantity_unit,
+      base_rate,
+      base_unit,
+      bonus_threshold,
+      scale_factor,
+      target_completions,
+      is_task,
+      archived,
+      pinned,
+      drawing
     FROM habits
     ORDER BY pinned DESC, created_at DESC
   `).all() as HabitRow[]
@@ -105,6 +147,12 @@ export function saveHabits(data: HabitsData) {
           description,
           frequency,
           coin_reward,
+          tracking_mode,
+          quantity_unit,
+          base_rate,
+          base_unit,
+          bonus_threshold,
+          scale_factor,
           target_completions,
           is_task,
           archived,
@@ -117,6 +165,12 @@ export function saveHabits(data: HabitsData) {
           @description,
           @frequency,
           @coin_reward,
+          @tracking_mode,
+          @quantity_unit,
+          @base_rate,
+          @base_unit,
+          @bonus_threshold,
+          @scale_factor,
           @target_completions,
           @is_task,
           @archived,
@@ -129,6 +183,12 @@ export function saveHabits(data: HabitsData) {
           description = excluded.description,
           frequency = excluded.frequency,
           coin_reward = excluded.coin_reward,
+          tracking_mode = excluded.tracking_mode,
+          quantity_unit = excluded.quantity_unit,
+          base_rate = excluded.base_rate,
+          base_unit = excluded.base_unit,
+          bonus_threshold = excluded.bonus_threshold,
+          scale_factor = excluded.scale_factor,
           target_completions = excluded.target_completions,
           is_task = excluded.is_task,
           archived = excluded.archived,
@@ -140,6 +200,12 @@ export function saveHabits(data: HabitsData) {
         description: habit.description,
         frequency: habit.frequency,
         coin_reward: habit.coinReward,
+        tracking_mode: habit.trackingMode ?? 'standard',
+        quantity_unit: habit.quantityUnit ?? null,
+        base_rate: habit.baseRate ?? null,
+        base_unit: habit.baseUnit ?? null,
+        bonus_threshold: habit.bonusThreshold ?? null,
+        scale_factor: habit.scaleFactor ?? null,
         target_completions: habit.targetCompletions ?? null,
         is_task: habit.isTask ? 1 : 0,
         archived: habit.archived ? 1 : 0,

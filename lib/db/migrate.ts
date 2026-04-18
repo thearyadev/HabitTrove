@@ -2,19 +2,41 @@ import type Database from 'better-sqlite3'
 import { getDefaultSettings } from '@/lib/types'
 import { SCHEMA_SQL, SCHEMA_VERSION } from './schema'
 
-function resetDatabase(db: Database.Database) {
-  db.exec(`
-    DROP TABLE IF EXISTS user_permissions;
-    DROP TABLE IF EXISTS user_settings;
-    DROP TABLE IF EXISTS habit_assignments;
-    DROP TABLE IF EXISTS wishlist_assignments;
-    DROP TABLE IF EXISTS users;
-    DROP TABLE IF EXISTS habit_completions;
-    DROP TABLE IF EXISTS habits;
-    DROP TABLE IF EXISTS wishlist_items;
-    DROP TABLE IF EXISTS coin_transactions;
-    DROP TABLE IF EXISTS app_settings;
-  `)
+function tableExists(db: Database.Database, tableName: string) {
+  const row = db
+    .prepare(`
+      SELECT name
+      FROM sqlite_master
+      WHERE type = 'table' AND name = ?
+    `)
+    .get(tableName) as { name: string } | undefined
+
+  return !!row
+}
+
+function columnExists(db: Database.Database, tableName: string, columnName: string) {
+  const columns = db.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>
+  return columns.some((column) => column.name === columnName)
+}
+
+function addColumnIfMissing(db: Database.Database, tableName: string, columnName: string, definition: string) {
+  if (!tableExists(db, tableName) || columnExists(db, tableName, columnName)) {
+    return
+  }
+
+  db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`)
+}
+
+function migrateToVersion3(db: Database.Database) {
+  addColumnIfMissing(db, 'habits', 'tracking_mode', `TEXT NOT NULL DEFAULT 'standard'`)
+  addColumnIfMissing(db, 'habits', 'quantity_unit', 'TEXT')
+  addColumnIfMissing(db, 'habits', 'base_rate', 'REAL')
+  addColumnIfMissing(db, 'habits', 'base_unit', 'REAL')
+  addColumnIfMissing(db, 'habits', 'bonus_threshold', 'REAL')
+  addColumnIfMissing(db, 'habits', 'scale_factor', 'REAL')
+
+  addColumnIfMissing(db, 'habit_completions', 'quantity', 'REAL')
+  addColumnIfMissing(db, 'habit_completions', 'coins_awarded', 'INTEGER')
 }
 
 function seedSettings(db: Database.Database) {
@@ -55,11 +77,12 @@ function seedSettings(db: Database.Database) {
 export function migrateDatabase(db: Database.Database) {
   const currentVersion = db.pragma('user_version', { simple: true }) as number
 
-  if (currentVersion !== SCHEMA_VERSION) {
-    resetDatabase(db)
-    db.exec(SCHEMA_SQL)
-    db.pragma(`user_version = ${SCHEMA_VERSION}`)
+  db.exec(SCHEMA_SQL)
+
+  if (currentVersion < 3) {
+    migrateToVersion3(db)
   }
 
+  db.pragma(`user_version = ${SCHEMA_VERSION}`)
   seedSettings(db)
 }

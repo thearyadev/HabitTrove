@@ -1,14 +1,29 @@
 import { RRule } from "rrule"
 import { DateTime } from "luxon"
 
+export type HabitTrackingMode = 'standard' | 'quantity'
+
+export type HabitCompletion = {
+  id: string
+  completedAt: string
+  quantity?: number
+  coinsAwarded?: number
+}
+
 export type Habit = {
   id: string
   name: string
   description: string
   frequency: string
   coinReward: number
+  trackingMode?: HabitTrackingMode
+  quantityUnit?: string
+  baseRate?: number
+  baseUnit?: number
+  bonusThreshold?: number
+  scaleFactor?: number
   targetCompletions?: number // Optional field, default to 1
-  completions: string[] // Array of UTC ISO date strings
+  completions: HabitCompletion[]
   isTask?: boolean // mark the habit as a task
   archived?: boolean // mark the habit as archived
   pinned?: boolean // mark the habit as pinned

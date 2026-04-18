@@ -48,7 +48,8 @@
     "deleteHabitDialogTitle": "Supprimer l'habitude",
     "confirmDeleteDialogMessage": "Êtes-vous sûr de vouloir supprimer \"{name}\" ? Cette action est irréversible.",
     "deleteButton": "Supprimer",
-    "overdueTooltip": "En retard"
+    "overdueTooltip": "En retard",
+    "quantityModeBadge": "Quantity"
   },
   "HabitContextMenuItems": {
     "startPomodoro": "Démarrer Pomodoro",
@@ -88,7 +89,24 @@
     "shareLabel": "Partager",
     "saveChangesButton": "Sauvegarder les modifications",
     "addTaskButton": "Ajouter une tâche",
-    "addHabitButton": "Ajouter une habitude"
+    "addHabitButton": "Ajouter une habitude",
+    "trackingModeLabel": "Tracking",
+    "trackingModeStandard": "Standard",
+    "trackingModeQuantity": "Quantity-based",
+    "quantityUnitLabel": "Unit",
+    "baseRateLabel": "Base rate",
+    "baseUnitLabel": "Per unit",
+    "bonusThresholdLabel": "Bonus threshold",
+    "scaleFactorLabel": "Scale factor",
+    "quantityUnitRequired": "Unit is required for quantity-based habits.",
+    "baseRateInvalid": "Base rate must be greater than 0.",
+    "baseUnitInvalid": "Per unit must be greater than 0.",
+    "bonusThresholdInvalid": "Bonus threshold must be greater than 0.",
+    "scaleFactorInvalid": "Scale factor must be greater than 1.",
+    "quantityPreviewBase": "{baseRate} coins per {baseUnit} {unit}",
+    "quantityPreviewBonus": "Above {threshold} {unit}, reward is multiplied by {scaleFactor}.",
+    "quantityPreviewExamples": "{threshold} earns {thresholdCoins} coins, {bonusQuantity} earns {bonusCoins} coins.",
+    "quantityUnitPlaceholder": "unit"
   },
   "ConfirmDialog": {
     "confirmButton": "Confirmer",
@@ -239,7 +257,11 @@
     "selectDatePrompt": "Sélectionner une date",
     "tasksSectionTitle": "Tâches",
     "habitsSectionTitle": "Habitudes",
-    "errorCompletingPastHabit": "Erreur lors de la complétion d'une habitude passée :"
+    "errorCompletingPastHabit": "Erreur lors de la complétion d'une habitude passée :",
+    "calendarCardDescription": "Select a date to review tasks and habits.",
+    "selectedDateDescription": "Mark completions directly from the selected day.",
+    "emptyStateText": "Nothing scheduled for this date.",
+    "quantityDisabledText": "Log from the habits view"
   },
   "NotificationDropdown": {
     "notLoggedIn": "Non connecté.",
@@ -322,7 +344,12 @@
     "completeButtonCount": "Compléter ({completed}/{target})",
     "completeButtonCountMobile": "{completed}/{target}",
     "undoButton": "Annuler",
-    "editButton": "Modifier"
+    "editButton": "Modifier",
+    "coinsPerQuantity": "{baseRate} coins / {unit}",
+    "quantityBonusHint": "Above {threshold} {unit}, reward scales by {scaleFactor}x.",
+    "logButton": "Log",
+    "logButtonCount": "Log ({completed}/{target})",
+    "logButtonCountMobile": "{completed}/{target}"
   },
   "TransactionNoteEditor": {
     "noteTooLongTitle": "Note trop longue",
@@ -414,7 +441,13 @@
     "alreadyCompletedPastDateTitle": "Déjà complété",
     "alreadyCompletedPastDateDescription": "Cette habitude a déjà été complétée le {dateKey}.",
     "earnedCoinsPastDateDescription": "Vous avez gagné {coinReward} pièces pour {dateKey}.",
-    "progressPastDateDescription": "Vous avez complété {count}/{target} fois le {dateKey}."
+    "progressPastDateDescription": "Vous avez complété {count}/{target} fois le {dateKey}.",
+    "quantityRequiredTitle": "Quantity required",
+    "quantityRequiredDescription": "Enter a quantity to log this habit.",
+    "earnedQuantityCoinsDescription": "Logged {quantity} {unit} and earned {coinReward} coins.",
+    "quantityCompletionUndoneDescription": "Quantity entry removed. You have {count}/{target} completions today.",
+    "quantityBackfillDisabledTitle": "Log from habits view",
+    "quantityBackfillDisabledDescription": "Quantity-based habits can only be logged from the main habits view."
   },
   "useWishlist": {
     "redemptionLimitReachedTitle": "Limite de rachat atteinte",
@@ -434,8 +467,6 @@
     "invalidAmountDescription": "Veuillez entrer un nombre positif valide",
     "successTitle": "Succès",
     "transactionNotFoundDescription": "Transaction non trouvée",
-    "maxAmountExceededDescription": "Le montant ne peut pas dépasser {max}.",
-    "transactionNotFoundDescription": "Transaction non trouvée",
     "maxAmountExceededDescription": "Le montant ne peut pas dépasser {max}."
   },
   "DrawingModal": {
@@ -445,5 +476,16 @@
     "clearButton": "Effacer",
     "saveDrawingButton": "Enregistrer le dessin",
     "cancelButton": "Annuler"
+  },
+  "LogHabitCompletionModal": {
+    "title": "Log {habitName}",
+    "description": "{baseRate} coins per {baseUnit} {unit}",
+    "bonusRule": "Above {threshold} {unit}, reward is multiplied by {scaleFactor}.",
+    "quantityLabel": "Quantity ({unit})",
+    "quantityPlaceholder": "Enter amount",
+    "estimatedRewardLabel": "Estimated reward",
+    "estimatedRewardValue": "{coins} coins",
+    "cancelButton": "Cancel",
+    "submitButton": "Log activity"
   }
 }

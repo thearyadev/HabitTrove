@@ -10,8 +10,8 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { useAtom } from 'jotai'
 import { useTranslations } from 'next-intl'
-import { pomodoroAtom, settingsAtom, completedHabitsMapAtom, browserSettingsAtom, hasTasksAtom } from '@/lib/atoms'
-import { getTodayInTimezone, isSameDate, t2d, d2t, getNow, isHabitDue, isTaskOverdue } from '@/lib/utils'
+import { settingsAtom, completedHabitsMapAtom, browserSettingsAtom, hasTasksAtom } from '@/lib/atoms'
+import { formatDecimal, getCompletionCountForDate, getHabitRewardValue, getNow, getTodayInTimezone, isHabitDue, isQuantityHabit, isTaskOverdue } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -30,6 +30,7 @@ import ConfirmDialog from './ConfirmDialog'
 import { Button } from './ui/button'
 import { HabitContextMenuItems } from './HabitContextMenuItems'
 import DrawingDisplay from './DrawingDisplay'
+import LogHabitCompletionModal from './LogHabitCompletionModal'
 
 interface UpcomingItemsProps {
   habits: Habit[]
@@ -55,8 +56,7 @@ const ItemSection = ({
   addNewItem,
 }: ItemSectionProps) => {
   const t = useTranslations('DailyOverview');
-  const { completeHabit, undoComplete, saveHabit, deleteHabit, archiveHabit, habitFreqMap } = useHabits();
-  const [_, setPomo] = useAtom(pomodoroAtom);
+  const { completeHabit, undoComplete, saveHabit, deleteHabit, habitFreqMap } = useHabits();
   const [browserSettings, setBrowserSettings] = useAtom(browserSettingsAtom);
   const [settings] = useAtom(settingsAtom);
   const [completedHabitsMap] = useAtom(completedHabitsMapAtom);
@@ -76,6 +76,7 @@ const ItemSection = ({
   const [isConfirmDeleteDialogOpen, setIsConfirmDeleteDialogOpen] = useState(false);
   const [habitToDelete, setHabitToDelete] = useState<Habit | null>(null);
   const [habitToEdit, setHabitToEdit] = useState<Habit | null>(null);
+  const [quantityHabitToLog, setQuantityHabitToLog] = useState<Habit | null>(null);
 
   const handleDeleteClick = (habit: Habit) => {
     setHabitToDelete(habit);
@@ -159,8 +160,10 @@ const ItemSection = ({
             }
 
             // Then by coin reward (higher first)
-            if (a.coinReward !== b.coinReward) {
-              return b.coinReward - a.coinReward;
+            const aReward = getHabitRewardValue(a);
+            const bReward = getHabitRewardValue(b);
+            if (aReward !== bReward) {
+              return bReward - aReward;
             }
 
             // Finally by target completions (higher first)
@@ -170,11 +173,14 @@ const ItemSection = ({
           })
           .slice(0, currentExpanded ? undefined : 5)
           .map((habit) => {
-            const completionsToday = habit.completions.filter(completion =>
-              isSameDate(t2d({ timestamp: completion, timezone: settings.system.timezone }), t2d({ timestamp: d2t({ dateTime: getNow({ timezone: settings.system.timezone }) }), timezone: settings.system.timezone }))
-            ).length
+            const completionsToday = getCompletionCountForDate({
+              habit,
+              date: getNow({ timezone: settings.system.timezone }),
+              timezone: settings.system.timezone,
+            })
             const target = habit.targetCompletions || 1
             const isCompleted = completionsToday >= target || (isTask && habit.archived)
+            const quantityHabit = isQuantityHabit(habit)
             return (
               <li
                 className={`flex items-center justify-between text-sm p-2 rounded-md
@@ -193,7 +199,11 @@ const ItemSection = ({
                               if (isCompleted) {
                                 undoComplete(habit);
                               } else {
-                                completeHabit(habit);
+                                if (quantityHabit) {
+                                  setQuantityHabitToLog(habit);
+                                } else {
+                                  completeHabit(habit);
+                                }
                               }
                             }}
                             className="relative hover:opacity-70 transition-opacity w-4 h-4"
@@ -301,9 +311,16 @@ const ItemSection = ({
                         ? "text-yellow-500 font-medium"
                         : "text-gray-400"
                     )}>
-                      {habit.coinReward}
+                      {quantityHabit
+                        ? `${formatDecimal(habit.baseRate ?? 0)}/${habit.quantityUnit}`
+                        : habit.coinReward}
                     </span>
                   </span>
+                  {quantityHabit && (
+                    <span className="hidden md:inline">
+                      {t('quantityModeBadge')}
+                    </span>
+                  )}
                 </span>
               </li>
             )
@@ -361,6 +378,16 @@ const ItemSection = ({
           isTask={habitToEdit.isTask || false}
         />
       )}
+      {quantityHabitToLog && (
+        <LogHabitCompletionModal
+          habit={quantityHabitToLog}
+          open={!!quantityHabitToLog}
+          onClose={() => setQuantityHabitToLog(null)}
+          onSubmit={async (quantity) => {
+            await completeHabit(quantityHabitToLog, { quantity });
+          }}
+        />
+      )}
     </div>
   );
 };
@@ -371,13 +398,9 @@ export default function DailyOverview({
   coinBalance,
 }: UpcomingItemsProps) {
   const t = useTranslations('DailyOverview');
-  const { completeHabit, undoComplete } = useHabits()
-  const [settings] = useAtom(settingsAtom)
-  const [completedHabitsMap] = useAtom(completedHabitsMapAtom)
-  const [browserSettings, setBrowserSettings] = useAtom(browserSettingsAtom)
-  const today = getTodayInTimezone(settings.system.timezone)
-  const todayCompletions = completedHabitsMap.get(today) || []
   const { saveHabit } = useHabits()
+  const [settings] = useAtom(settingsAtom)
+  const [browserSettings, setBrowserSettings] = useAtom(browserSettingsAtom)
 
   const timezone = settings.system.timezone
   const todayDateObj = getNow({ timezone })
@@ -411,7 +434,6 @@ export default function DailyOverview({
     })
 
   const [hasTasks] = useAtom(hasTasksAtom)
-  const [, setPomo] = useAtom(pomodoroAtom)
   const [modalConfig, setModalConfig] = useState<{
     isOpen: boolean,
     isTask: boolean

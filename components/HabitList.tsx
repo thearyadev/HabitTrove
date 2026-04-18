@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input' // Added
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select' // Added
 import { Label } from '@/components/ui/label' // Added
 import { DateTime } from 'luxon' // Added
-import { getHabitFreq } from '@/lib/utils' // Added
+import { getHabitFreq, getHabitRewardValue } from '@/lib/utils' // Added
 
 export default function HabitList() {
   const t = useTranslations('HabitList');
@@ -51,7 +51,7 @@ export default function HabitList() {
           comparison = a.name.localeCompare(b.name);
           break;
         case 'coinReward':
-          comparison = a.coinReward - b.coinReward;
+          comparison = getHabitRewardValue(a) - getHabitRewardValue(b);
           break;
         case 'dueDate':
           if (tasksView && a.isTask && b.isTask) {

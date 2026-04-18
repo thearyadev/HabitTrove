@@ -48,7 +48,8 @@
     "deleteHabitDialogTitle": "Elimina hàbit",
     "confirmDeleteDialogMessage": "Estàs segur que vols eliminar \"{name}\"? Aquesta acció no es pot desfer.",
     "deleteButton": "Elimina",
-    "overdueTooltip": "Vençut"
+    "overdueTooltip": "Vençut",
+    "quantityModeBadge": "Quantity"
   },
   "HabitContextMenuItems": {
     "startPomodoro": "Inicia Pomodoro",
@@ -88,7 +89,24 @@
     "shareLabel": "Comparteix",
     "saveChangesButton": "Desa els canvis",
     "addTaskButton": "Afegeix tasca",
-    "addHabitButton": "Afegeix hàbit"
+    "addHabitButton": "Afegeix hàbit",
+    "trackingModeLabel": "Tracking",
+    "trackingModeStandard": "Standard",
+    "trackingModeQuantity": "Quantity-based",
+    "quantityUnitLabel": "Unit",
+    "baseRateLabel": "Base rate",
+    "baseUnitLabel": "Per unit",
+    "bonusThresholdLabel": "Bonus threshold",
+    "scaleFactorLabel": "Scale factor",
+    "quantityUnitRequired": "Unit is required for quantity-based habits.",
+    "baseRateInvalid": "Base rate must be greater than 0.",
+    "baseUnitInvalid": "Per unit must be greater than 0.",
+    "bonusThresholdInvalid": "Bonus threshold must be greater than 0.",
+    "scaleFactorInvalid": "Scale factor must be greater than 1.",
+    "quantityPreviewBase": "{baseRate} coins per {baseUnit} {unit}",
+    "quantityPreviewBonus": "Above {threshold} {unit}, reward is multiplied by {scaleFactor}.",
+    "quantityPreviewExamples": "{threshold} earns {thresholdCoins} coins, {bonusQuantity} earns {bonusCoins} coins.",
+    "quantityUnitPlaceholder": "unit"
   },
   "ConfirmDialog": {
     "confirmButton": "Confirma",
@@ -239,7 +257,11 @@
     "selectDatePrompt": "Selecciona una data",
     "tasksSectionTitle": "Tasques",
     "habitsSectionTitle": "Hàbits",
-    "errorCompletingPastHabit": "Error en completar hàbit passat:"
+    "errorCompletingPastHabit": "Error en completar hàbit passat:",
+    "calendarCardDescription": "Select a date to review tasks and habits.",
+    "selectedDateDescription": "Mark completions directly from the selected day.",
+    "emptyStateText": "Nothing scheduled for this date.",
+    "quantityDisabledText": "Log from the habits view"
   },
   "NotificationDropdown": {
     "notLoggedIn": "No has iniciat sessió.",
@@ -322,7 +344,12 @@
     "completeButtonCount": "Completa ({completed}/{target})",
     "completeButtonCountMobile": "{completed}/{target}",
     "undoButton": "Desfés",
-    "editButton": "Edita"
+    "editButton": "Edita",
+    "coinsPerQuantity": "{baseRate} coins / {unit}",
+    "quantityBonusHint": "Above {threshold} {unit}, reward scales by {scaleFactor}x.",
+    "logButton": "Log",
+    "logButtonCount": "Log ({completed}/{target})",
+    "logButtonCountMobile": "{completed}/{target}"
   },
   "TransactionNoteEditor": {
     "noteTooLongTitle": "Nota massa llarga",
@@ -414,7 +441,13 @@
     "alreadyCompletedPastDateTitle": "Ja completat",
     "alreadyCompletedPastDateDescription": "Aquest hàbit ja va ser completat el {dateKey}.",
     "earnedCoinsPastDateDescription": "Vas guanyar {coinReward} monedes per {dateKey}.",
-    "progressPastDateDescription": "Has completat {count}/{target} vegades el {dateKey}."
+    "progressPastDateDescription": "Has completat {count}/{target} vegades el {dateKey}.",
+    "quantityRequiredTitle": "Quantity required",
+    "quantityRequiredDescription": "Enter a quantity to log this habit.",
+    "earnedQuantityCoinsDescription": "Logged {quantity} {unit} and earned {coinReward} coins.",
+    "quantityCompletionUndoneDescription": "Quantity entry removed. You have {count}/{target} completions today.",
+    "quantityBackfillDisabledTitle": "Log from habits view",
+    "quantityBackfillDisabledDescription": "Quantity-based habits can only be logged from the main habits view."
   },
   "useWishlist": {
     "redemptionLimitReachedTitle": "Límit de bescanvis assolit",
@@ -443,5 +476,16 @@
     "clearButton": "Neteja",
     "saveDrawingButton": "Desa el dibuix",
     "cancelButton": "Cancel·la"
+  },
+  "LogHabitCompletionModal": {
+    "title": "Log {habitName}",
+    "description": "{baseRate} coins per {baseUnit} {unit}",
+    "bonusRule": "Above {threshold} {unit}, reward is multiplied by {scaleFactor}.",
+    "quantityLabel": "Quantity ({unit})",
+    "quantityPlaceholder": "Enter amount",
+    "estimatedRewardLabel": "Estimated reward",
+    "estimatedRewardValue": "{coins} coins",
+    "cancelButton": "Cancel",
+    "submitButton": "Log activity"
   }
 }

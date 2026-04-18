@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 2
+export const SCHEMA_VERSION = 3
 
 export const SCHEMA_SQL = `
   CREATE TABLE IF NOT EXISTS app_settings (
@@ -17,6 +17,12 @@ export const SCHEMA_SQL = `
     description TEXT NOT NULL DEFAULT '',
     frequency TEXT NOT NULL,
     coin_reward INTEGER NOT NULL,
+    tracking_mode TEXT NOT NULL DEFAULT 'standard',
+    quantity_unit TEXT,
+    base_rate REAL,
+    base_unit REAL,
+    bonus_threshold REAL,
+    scale_factor REAL,
     target_completions INTEGER,
     is_task INTEGER NOT NULL DEFAULT 0,
     archived INTEGER NOT NULL DEFAULT 0,
@@ -29,6 +35,8 @@ export const SCHEMA_SQL = `
     id TEXT PRIMARY KEY,
     habit_id TEXT NOT NULL,
     completed_at TEXT NOT NULL,
+    quantity REAL,
+    coins_awarded INTEGER,
     FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE CASCADE
   );
 
