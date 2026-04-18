@@ -1,6 +1,6 @@
 services:
   habittrove:
-    image: thearyadev/habittrove:latest
+    image: thearyadev0/habittrove:latest
     ports:
       - "3000:3000"
     volumes:

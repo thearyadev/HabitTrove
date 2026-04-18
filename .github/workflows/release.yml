@@ -58,8 +58,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            thearyadev/habittrove:latest
-            thearyadev/habittrove:${{ inputs.version }}
+            thearyadev0/habittrove:latest
+            thearyadev0/habittrove:${{ inputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
