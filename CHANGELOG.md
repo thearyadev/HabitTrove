@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 0.0.2
+
+### Changed
+
+* Removed drawing canvas feature and all related UI components and data fields
+
 ## Version 0.2.31
 
 **This Release contains important security patches, please update as soon as possible**
