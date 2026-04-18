@@ -10,6 +10,7 @@ import { settingsAtom, serverSettingsAtom } from '@/lib/atoms';
 import { Settings, WeekDay } from '@/lib/types'
 import { saveSettings } from '../actions/data'
 import { toast } from '@/hooks/use-toast'
+import BulkEditStudio from '@/components/BulkEditStudio'
 
 export default function SettingsPage() {
   const t = useTranslations('SettingsPage');
@@ -187,7 +188,7 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Danger Zone Card Removed */}
+        <BulkEditStudio />
       </div >
     </>
   )

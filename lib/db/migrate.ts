@@ -39,6 +39,11 @@ function migrateToVersion3(db: Database.Database) {
   addColumnIfMissing(db, 'habit_completions', 'coins_awarded', 'INTEGER')
 }
 
+function migrateToVersion4(db: Database.Database) {
+  addColumnIfMissing(db, 'habits', 'deleted_at', 'TEXT')
+  addColumnIfMissing(db, 'wishlist_items', 'deleted_at', 'TEXT')
+}
+
 function seedSettings(db: Database.Database) {
   const existing = db.prepare('SELECT singleton FROM app_settings WHERE singleton = 1').get()
   if (existing) {
@@ -81,6 +86,10 @@ export function migrateDatabase(db: Database.Database) {
 
   if (currentVersion < 3) {
     migrateToVersion3(db)
+  }
+
+  if (currentVersion < 4) {
+    migrateToVersion4(db)
   }
 
   db.pragma(`user_version = ${SCHEMA_VERSION}`)
