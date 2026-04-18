@@ -30,7 +30,6 @@ import AddEditHabitModal from './AddEditHabitModal'
 import ConfirmDialog from './ConfirmDialog'
 import { Button } from './ui/button'
 import { HabitContextMenuItems } from './HabitContextMenuItems'
-import DrawingDisplay from './DrawingDisplay'
 import LogHabitCompletionModal from './LogHabitCompletionModal'
 
 interface UpcomingItemsProps {
@@ -265,17 +264,7 @@ const ItemSection = ({
                               {habit.name}
                             </span>
                           </Link>
-                          {habit.drawing && (
-                            <div className="ml-2 pr-2">
-                              <DrawingDisplay
-                                drawingData={habit.drawing}
-                                width={40}
-                                height={26}
-                                className="border-0"
-                              />
-                            </div>
-                          )}
-                        </span>
+                         </span>
                       </div>
                     </ContextMenuTrigger>
                     <ContextMenuContent className="w-64">
@@ -523,14 +512,6 @@ export default function DailyOverview({
                                   <span className="text-sm">
                                     <Linkify>{reward.name}</Linkify>
                                   </span>
-                                  {reward.drawing && (
-                                    <DrawingDisplay
-                                      drawingData={reward.drawing}
-                                      width={40}
-                                      height={26}
-                                      className="border-0"
-                                    />
-                                  )}
                                   {usage.isExhausted && (
                                     <Badge variant="secondary" className="text-[10px]">
                                       {tx('rewardLimitReachedBadge', 'Limit reached')}

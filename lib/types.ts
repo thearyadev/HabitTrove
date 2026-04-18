@@ -27,7 +27,6 @@ export type Habit = {
   isTask?: boolean // mark the habit as a task
   archived?: boolean // mark the habit as archived
   pinned?: boolean // mark the habit as pinned
-  drawing?: string // Optional JSON string of drawing data
 }
 
 
@@ -53,7 +52,6 @@ export type RewardDefinition = {
   description: string
   archived?: boolean // mark the wishlist item as archived
   link?: string // Optional URL to external resource
-  drawing?: string // Optional JSON string of drawing data
   redemptionRule: RewardRedemptionRule
   tiers: RewardTier[]
 }

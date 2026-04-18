@@ -22,10 +22,6 @@ Thank you @1ARdotNO for the security audit!
 
 ## Version 0.2.29
 
-### Added
-
-* ✏️ Freehand drawing capability for habits and wishlist items
-
 ### Fixed
 
 * Wishlist and Habit card layout - time and rewards sections now stay at bottom regardless of description length

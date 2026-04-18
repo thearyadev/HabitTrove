@@ -5,7 +5,7 @@ import { RRule } from 'rrule'
 import { useAtom } from 'jotai'
 import { useTranslations } from 'next-intl'
 import { DateTime } from 'luxon'
-import { Brush, Minus, Plus, Sparkles, Zap } from 'lucide-react'
+import { Minus, Plus, Sparkles, Zap } from 'lucide-react'
 import { settingsAtom } from '@/lib/atoms'
 import {
   Dialog,
@@ -23,8 +23,7 @@ import { Separator } from '@/components/ui/separator'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Habit } from '@/lib/types'
 import EmojiPickerButton from './EmojiPickerButton'
-import DrawingModal from './DrawingModal'
-import DrawingDisplay from './DrawingDisplay'
+
 import {
   calculateQuantityHabitCoins,
   cn,
@@ -153,9 +152,6 @@ export default function AddEditHabitModal({ onClose, onSave, habit, isTask }: Ad
   const [scaleFactor, setScaleFactor] = useState(habit?.scaleFactor ?? 1.5)
   const [targetCompletions, setTargetCompletions] = useState(habit?.targetCompletions || 1)
   const [isQuickDatesOpen, setIsQuickDatesOpen] = useState(false)
-  const [drawing, setDrawing] = useState<string>(habit?.drawing || '')
-  const [isDrawingModalOpen, setIsDrawingModalOpen] = useState(false)
-
   const isRecurring = !isTask
   const initialRuleText = habit?.frequency
     ? convertMachineReadableFrequencyToHumanReadable({
@@ -284,14 +280,13 @@ export default function AddEditHabitModal({ onClose, onSave, habit, isTask }: Ad
       targetCompletions: targetCompletions > 1 ? targetCompletions : undefined,
       completions: habit?.completions || [],
       frequency: getFrequencyUpdate(),
-      drawing: drawing && drawing !== '[]' ? drawing : undefined,
     })
   }
 
   return (
     <>
       <Dialog open={true} onOpenChange={(open) => {
-        if (!open && !isDrawingModalOpen) {
+        if (!open) {
           onClose()
         }
       }}>
@@ -551,36 +546,7 @@ export default function AddEditHabitModal({ onClose, onSave, habit, isTask }: Ad
                   )}
                 </SectionCard>
 
-                <SectionCard title={t('drawingLabel')}>
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={(event) => {
-                        event.preventDefault()
-                        event.stopPropagation()
-                        setIsDrawingModalOpen(true)
-                      }}
-                      className="h-11 justify-start gap-2 px-4 sm:w-auto"
-                    >
-                      <Brush className="h-4 w-4" />
-                      {drawing ? t('editDrawing') : t('addDrawing')}
-                    </Button>
 
-                    {drawing ? (
-                      <div className="overflow-hidden rounded-xl border border-border/70 bg-muted/20 p-2">
-                        <DrawingDisplay
-                          drawingData={drawing}
-                          width={120}
-                          height={80}
-                          className=""
-                        />
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">{t('addDrawing')}</p>
-                    )}
-                  </div>
-                </SectionCard>
               </div>
             </div>
 
@@ -600,13 +566,6 @@ export default function AddEditHabitModal({ onClose, onSave, habit, isTask }: Ad
         </DialogContent>
       </Dialog>
 
-      <DrawingModal
-        isOpen={isDrawingModalOpen}
-        onClose={() => setIsDrawingModalOpen(false)}
-        onSave={(drawingData) => setDrawing(drawingData)}
-        initialDrawing={drawing}
-        title={name}
-      />
     </>
   )
 }

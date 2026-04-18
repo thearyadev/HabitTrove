@@ -26,9 +26,8 @@ import { MAX_COIN_LIMIT } from '@/lib/constants'
 import { RewardDefinition, RewardLimitWindow, RewardTier } from '@/lib/types'
 import { translateWithFallback } from '@/lib/i18n'
 import EmojiPickerButton from './EmojiPickerButton'
-import DrawingModal from './DrawingModal'
-import DrawingDisplay from './DrawingDisplay'
-import { ArrowDown, ArrowUp, Brush, Plus, Trash2 } from 'lucide-react'
+
+import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react'
 
 type RewardFormTier = RewardTier & {
   localId: string
@@ -76,19 +75,19 @@ export default function AddEditWishlistItemModal({
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [link, setLink] = useState('')
-  const [drawing, setDrawing] = useState('')
+
   const [window, setWindow] = useState<RewardLimitWindow>('unlimited')
   const [maxRedemptions, setMaxRedemptions] = useState('1')
   const [tiers, setTiers] = useState<RewardFormTier[]>([createEmptyTier(0)])
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [isDrawingModalOpen, setIsDrawingModalOpen] = useState(false)
+
 
   useEffect(() => {
     if (editingItem) {
       setName(editingItem.name)
       setDescription(editingItem.description)
       setLink(editingItem.link ?? '')
-      setDrawing(editingItem.drawing ?? '')
+
       setWindow(editingItem.redemptionRule.window)
       setMaxRedemptions(String(editingItem.redemptionRule.maxRedemptions ?? 1))
       setTiers(editingItem.tiers.map((tier, index) => ({
@@ -103,7 +102,7 @@ export default function AddEditWishlistItemModal({
     setName('')
     setDescription('')
     setLink('')
-    setDrawing('')
+
     setWindow('unlimited')
     setMaxRedemptions('1')
     setTiers([createEmptyTier(0)])
@@ -184,7 +183,6 @@ export default function AddEditWishlistItemModal({
       description: description.trim(),
       archived: editingItem?.archived ?? false,
       link: link.trim() || undefined,
-      drawing: drawing && drawing !== '[]' ? drawing : undefined,
       redemptionRule: {
         window,
         maxRedemptions: window === 'unlimited' ? undefined : Number(maxRedemptions),
@@ -221,7 +219,7 @@ export default function AddEditWishlistItemModal({
       <Dialog
         open={isOpen}
         onOpenChange={(open) => {
-          if (!open && !isDrawingModalOpen) {
+          if (!open) {
             handleClose()
           }
         }}
@@ -322,27 +320,6 @@ export default function AddEditWishlistItemModal({
                       )}
 
                       <Separator />
-
-                      <div className="space-y-3">
-                        <Label>{t('drawingLabel')}</Label>
-                        {drawing && (
-                          <DrawingDisplay
-                            drawingData={drawing}
-                            width={180}
-                            height={120}
-                            className="rounded-md border"
-                          />
-                        )}
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="w-full"
-                          onClick={() => setIsDrawingModalOpen(true)}
-                        >
-                          <Brush className="h-4 w-4" />
-                          {drawing ? t('editDrawing') : t('addDrawing')}
-                        </Button>
-                      </div>
 
                       <div className="rounded-lg bg-secondary/40 p-4">
                         <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
@@ -478,12 +455,6 @@ export default function AddEditWishlistItemModal({
         </DialogContent>
       </Dialog>
 
-      <DrawingModal
-        isOpen={isDrawingModalOpen}
-        onClose={() => setIsDrawingModalOpen(false)}
-        onSave={setDrawing}
-        initialDrawing={drawing}
-      />
     </>
   )
 }

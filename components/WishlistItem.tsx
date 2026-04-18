@@ -26,7 +26,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import DrawingDisplay from './DrawingDisplay'
+
 
 interface WishlistItemProps {
   reward: RewardDefinition
@@ -136,14 +136,6 @@ export default function WishlistItem({
           </div>
 
           <div className="flex items-start gap-2">
-            {reward.drawing && (
-              <DrawingDisplay
-                drawingData={reward.drawing}
-                width={132}
-                height={88}
-                className="rounded-lg border bg-background/80"
-              />
-            )}
             <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon">

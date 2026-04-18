@@ -12,7 +12,6 @@ type RewardRow = {
   description: string
   archived: number
   link: string | null
-  drawing: string | null
   limit_window: RewardLimitWindow
   max_redemptions: number | null
 }
@@ -45,7 +44,6 @@ function hydrateRewards(rows: RewardRow[], tierRows: RewardTierRow[]): RewardDef
     description: row.description,
     archived: row.archived === 1,
     link: row.link ?? undefined,
-    drawing: row.drawing ?? undefined,
     redemptionRule: {
       window: row.limit_window,
       maxRedemptions: row.max_redemptions ?? undefined,
@@ -73,7 +71,6 @@ function upsertRewards(
         description,
         archived,
         link,
-        drawing,
         limit_window,
         max_redemptions,
         created_at,
@@ -84,7 +81,6 @@ function upsertRewards(
         @description,
         @archived,
         @link,
-        @drawing,
         @limit_window,
         @max_redemptions,
         @created_at,
@@ -95,7 +91,6 @@ function upsertRewards(
         description = excluded.description,
         archived = excluded.archived,
         link = excluded.link,
-        drawing = excluded.drawing,
         limit_window = excluded.limit_window,
         max_redemptions = excluded.max_redemptions,
         deleted_at = NULL
@@ -105,7 +100,6 @@ function upsertRewards(
       description: reward.description,
       archived: reward.archived ? 1 : 0,
       link: reward.link ?? null,
-      drawing: reward.drawing ?? null,
       limit_window: reward.redemptionRule.window,
       max_redemptions:
         reward.redemptionRule.window === 'unlimited'
@@ -204,7 +198,7 @@ function upsertRewards(
 export function getWishlist(): WishlistData {
   const db = getDatabase()
   const rewardRows = db.prepare(`
-    SELECT id, name, description, archived, link, drawing, limit_window, max_redemptions
+    SELECT id, name, description, archived, link, limit_window, max_redemptions
     FROM rewards
     WHERE deleted_at IS NULL
     ORDER BY archived ASC, created_at DESC

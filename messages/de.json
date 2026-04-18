@@ -83,9 +83,6 @@
     "timesSuffix": "mal",
     "rewardLabel": "Belohnung",
     "coinsSuffix": "Münzen",
-    "drawingLabel": "Zeichnung",
-    "addDrawing": "Zeichnung hinzufügen",
-    "editDrawing": "Zeichnung bearbeiten",
     "shareLabel": "Teilen",
     "saveChangesButton": "Änderungen speichern",
     "addTaskButton": "Aufgabe hinzufügen",
@@ -126,9 +123,6 @@
     "errorTargetCompletionsMin": "Zielabschlüsse müssen mindestens 1 sein",
     "errorInvalidUrl": "Bitte geben Sie eine gültige URL ein",
     "linkLabel": "Link",
-    "drawingLabel": "Zeichnung",
-    "addDrawing": "Zeichnung hinzufügen",
-    "editDrawing": "Zeichnung bearbeiten",
     "shareLabel": "Teilen",
     "saveButton": "Änderungen speichern",
     "addButton": "Belohnung hinzufügen"
@@ -468,14 +462,6 @@
     "successTitle": "Erfolg",
     "transactionNotFoundDescription": "Transaktion nicht gefunden",
     "maxAmountExceededDescription": "Der Betrag darf {max} nicht überschreiten."
-  },
-  "DrawingModal": {
-    "colorLabel": "Farbe:",
-    "thicknessLabel": "Dicke:",
-    "undoButton": "Rückgängig",
-    "clearButton": "Löschen",
-    "saveDrawingButton": "Zeichnung speichern",
-    "cancelButton": "Abbrechen"
   },
   "LogHabitCompletionModal": {
     "title": "Log {habitName}",

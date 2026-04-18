@@ -18,7 +18,6 @@ type HabitRow = {
   is_task: number
   archived: number
   pinned: number
-  drawing: string | null
 }
 
 type CompletionRow = {
@@ -81,7 +80,6 @@ function hydrateHabits(rows: HabitRow[]): Habit[] {
     isTask: row.is_task === 1,
     archived: row.archived === 1,
     pinned: row.pinned === 1,
-    drawing: row.drawing ?? undefined,
   }))
 }
 
@@ -136,7 +134,6 @@ function upsertHabitDefinitions(
         is_task,
         archived,
         pinned,
-        drawing,
         created_at,
         deleted_at
       ) VALUES (
@@ -155,7 +152,6 @@ function upsertHabitDefinitions(
         @is_task,
         @archived,
         @pinned,
-        @drawing,
         @created_at,
         NULL
       )
@@ -174,7 +170,6 @@ function upsertHabitDefinitions(
         is_task = excluded.is_task,
         archived = excluded.archived,
         pinned = excluded.pinned,
-        drawing = excluded.drawing,
         deleted_at = NULL
     `).run({
       id: habit.id,
@@ -192,7 +187,6 @@ function upsertHabitDefinitions(
       is_task: habit.isTask ? 1 : 0,
       archived: habit.archived ? 1 : 0,
       pinned: habit.pinned ? 1 : 0,
-      drawing: habit.drawing ?? null,
       created_at: existing?.created_at ?? new Date().toISOString(),
     })
 
@@ -241,8 +235,7 @@ export function getHabits(): HabitsData {
       target_completions,
       is_task,
       archived,
-      pinned,
-      drawing
+      pinned
     FROM habits
     WHERE deleted_at IS NULL
     ORDER BY pinned DESC, created_at DESC

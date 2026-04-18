@@ -83,9 +83,6 @@
     "timesSuffix": "раз",
     "rewardLabel": "Награда",
     "coinsSuffix": "монет",
-    "drawingLabel": "Рисунок",
-    "addDrawing": "Добавить Рисунок",
-    "editDrawing": "Редактировать Рисунок",
     "shareLabel": "Поделиться",
     "saveChangesButton": "Сохранить",
     "addTaskButton": "Добавить задачу",
@@ -126,9 +123,6 @@
     "errorTargetCompletionsMin": "Минимум 1 выполнение",
     "errorInvalidUrl": "Некорректная ссылка",
     "linkLabel": "Ссылка",
-    "drawingLabel": "Рисунок",
-    "addDrawing": "Добавить Рисунок",
-    "editDrawing": "Редактировать Рисунок",
     "shareLabel": "Поделиться",
     "saveButton": "Сохранить",
     "addButton": "Добавить цель"
@@ -468,14 +462,6 @@
     "successTitle": "Успех",
     "transactionNotFoundDescription": "Транзакция не найдена",
     "maxAmountExceededDescription": "Сумма не может превышать {max}."
-  },
-  "DrawingModal": {
-    "colorLabel": "Цвет:",
-    "thicknessLabel": "Толщина:",
-    "undoButton": "Отменить",
-    "clearButton": "Очистить",
-    "saveDrawingButton": "Сохранить рисунок",
-    "cancelButton": "Отмена"
   },
   "LogHabitCompletionModal": {
     "title": "Log {habitName}",

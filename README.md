@@ -19,7 +19,6 @@ Want to try HabitTrove before installing? Visit the public [demo instance](https
 - 🏆 Earn coins for completing habits
 - 💰 Create a wishlist of rewards to redeem with earned coins
 - 📊 View your habit completion streaks and statistics
-- ✏️ Add freehand drawings to habits and wishlist items for visual reminders
 - 📅 Calendar heatmap to visualize your progress (WIP)
 - 🌍 Multi-language support (English, Español, Català, Deutsch, Français, Русский, 简体中文, 한국어, 日本語)
 - 🌙 Dark mode support

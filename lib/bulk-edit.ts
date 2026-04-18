@@ -33,7 +33,6 @@ const bulkEditHabitSchema = z.object({
   targetCompletions: z.number().int().min(1).optional(),
   archived: z.boolean().optional(),
   pinned: z.boolean().optional(),
-  drawing: optionalTrimmedString,
 }).superRefine((value, ctx) => {
   if (value.trackingMode !== 'quantity') {
     return
@@ -110,7 +109,6 @@ const bulkEditRewardSchema = z.object({
   description: z.string().default(''),
   archived: z.boolean().optional(),
   link: optionalUrlString,
-  drawing: optionalTrimmedString,
   redemptionRule: bulkEditRewardRedemptionRuleSchema,
   tiers: z.array(bulkEditRewardTierSchema).min(1, 'Rewards require at least one tier.'),
 }).superRefine((value, ctx) => {
@@ -245,7 +243,6 @@ export function createBulkEditPayload({
       description: reward.description,
       archived: reward.archived ?? false,
       link: reward.link,
-      drawing: reward.drawing,
       redemptionRule: {
         window: reward.redemptionRule.window,
         maxRedemptions: reward.redemptionRule.maxRedemptions,
@@ -276,7 +273,6 @@ function mapHabitToBulkRecord(habit: Habit): BulkEditHabitRecord {
     targetCompletions: habit.targetCompletions,
     archived: habit.archived ?? false,
     pinned: habit.pinned ?? false,
-    drawing: habit.drawing,
   }
 }
 

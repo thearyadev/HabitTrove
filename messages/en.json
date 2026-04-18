@@ -74,14 +74,6 @@
   "CoinBalance": {
     "coinBalanceTitle": "Coin Balance"
   },
-  "DrawingModal": {
-    "colorLabel": "Color",
-    "thicknessLabel": "Thickness",
-    "undoButton": "Undo",
-    "clearButton": "Clear",
-    "saveDrawingButton": "Save Drawing",
-    "cancelButton": "Cancel"
-  },
   "AddEditHabitModal": {
     "editTaskTitle": "Edit Task",
     "editHabitTitle": "Edit Habit",
@@ -94,9 +86,6 @@
     "timesSuffix": "times",
     "rewardLabel": "Reward",
     "coinsSuffix": "coins",
-    "drawingLabel": "Drawing",
-    "addDrawing": "Add Drawing",
-    "editDrawing": "Edit Drawing",
     "shareLabel": "Share",
     "saveChangesButton": "Save Changes",
     "addTaskButton": "Add Task",
@@ -162,9 +151,6 @@
     "errorCoinCostMax": "Coin cost cannot exceed {max}",
     "errorMaxRedemptionsMin": "Max redemptions must be at least 1",
     "errorInvalidUrl": "Please enter a valid URL",
-    "drawingLabel": "Drawing",
-    "addDrawing": "Add Drawing",
-    "editDrawing": "Edit Drawing",
     "cancelButton": "Cancel",
     "saveButton": "Save Changes",
     "addButton": "Add Reward"

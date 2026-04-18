@@ -27,7 +27,6 @@ export const SCHEMA_SQL = `
     is_task INTEGER NOT NULL DEFAULT 0,
     archived INTEGER NOT NULL DEFAULT 0,
     pinned INTEGER NOT NULL DEFAULT 0,
-    drawing TEXT,
     created_at TEXT NOT NULL,
     deleted_at TEXT
   );
@@ -47,7 +46,6 @@ export const SCHEMA_SQL = `
     description TEXT NOT NULL DEFAULT '',
     archived INTEGER NOT NULL DEFAULT 0,
     link TEXT,
-    drawing TEXT,
     limit_window TEXT NOT NULL DEFAULT 'unlimited',
     max_redemptions INTEGER,
     created_at TEXT NOT NULL,

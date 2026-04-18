@@ -14,7 +14,6 @@ import { useEffect, useState } from 'react'
 import { useHabits } from '@/hooks/useHabits'
 import { useTranslations } from 'next-intl'
 import { HabitContextMenuItems } from './HabitContextMenuItems'
-import DrawingDisplay from './DrawingDisplay'
 import LogHabitCompletionModal from './LogHabitCompletionModal'
 
 interface HabitItemProps {
@@ -80,23 +79,11 @@ export default function HabitItem({ habit, onEdit, onDelete }: HabitItemProps) {
               )}
             </CardTitle>
           </div>
-          {(habit.description || habit.drawing) && (
-            <div className={`flex gap-4 mt-2 ${!habit.description ? 'justify-end' : ''}`}>
-              {habit.description && (
-                <CardDescription className={`whitespace-pre-line flex-1 min-w-0 break-words ${habit.archived ? 'text-gray-400 dark:text-gray-500' : ''}`}>
-                  {habit.description}
-                </CardDescription>
-              )}
-              {habit.drawing && (
-                <div className="flex-shrink-0">
-                  <DrawingDisplay
-                    drawingData={habit.drawing}
-                    width={120}
-                    height={80}
-                    className=""
-                  />
-                </div>
-              )}
+          {habit.description && (
+            <div className="mt-2">
+              <CardDescription className={`whitespace-pre-line flex-1 min-w-0 break-words ${habit.archived ? 'text-gray-400 dark:text-gray-500' : ''}`}>
+                {habit.description}
+              </CardDescription>
             </div>
           )}
         </CardHeader>
