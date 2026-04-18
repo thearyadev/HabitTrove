@@ -16,9 +16,9 @@ export default function Dashboard() {
   const habits = habitsData.habits
   const { balance } = useCoins()
   const [wishlist] = useAtom(wishlistAtom)
-  const wishlistItems = wishlist.items
+  const wishlistRewards = wishlist.rewards
   const activeHabits = habits.filter((habit) => !habit.archived)
-  const activeRewards = wishlistItems.filter((item) => !item.archived)
+  const activeRewards = wishlistRewards.filter((reward) => !reward.archived)
 
   return (
     <div className="space-y-6">
@@ -66,7 +66,7 @@ export default function Dashboard() {
         </div>
         <div className="min-w-0">
           <DailyOverview
-            wishlistItems={wishlistItems}
+            wishlistRewards={wishlistRewards}
             habits={habits}
             coinBalance={balance}
           />

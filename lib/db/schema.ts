@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 4
+export const SCHEMA_VERSION = 5
 
 export const SCHEMA_SQL = `
   CREATE TABLE IF NOT EXISTS app_settings (
@@ -41,17 +41,28 @@ export const SCHEMA_SQL = `
     FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE CASCADE
   );
 
-  CREATE TABLE IF NOT EXISTS wishlist_items (
+  CREATE TABLE IF NOT EXISTS rewards (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
-    coin_cost INTEGER NOT NULL,
     archived INTEGER NOT NULL DEFAULT 0,
-    target_completions INTEGER,
     link TEXT,
     drawing TEXT,
+    limit_window TEXT NOT NULL DEFAULT 'unlimited',
+    max_redemptions INTEGER,
     created_at TEXT NOT NULL,
     deleted_at TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS reward_tiers (
+    id TEXT PRIMARY KEY,
+    reward_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    coin_cost INTEGER NOT NULL,
+    position INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    deleted_at TEXT,
+    FOREIGN KEY (reward_id) REFERENCES rewards(id) ON DELETE CASCADE
   );
 
   CREATE TABLE IF NOT EXISTS coin_transactions (
@@ -61,6 +72,7 @@ export const SCHEMA_SQL = `
     description TEXT NOT NULL,
     timestamp TEXT NOT NULL,
     related_item_id TEXT,
+    related_sub_item_id TEXT,
     note TEXT
   );
 
@@ -68,8 +80,12 @@ export const SCHEMA_SQL = `
     ON habit_completions(habit_id);
   CREATE INDEX IF NOT EXISTS idx_habits_deleted_at
     ON habits(deleted_at);
-  CREATE INDEX IF NOT EXISTS idx_wishlist_items_deleted_at
-    ON wishlist_items(deleted_at);
+  CREATE INDEX IF NOT EXISTS idx_rewards_deleted_at
+    ON rewards(deleted_at);
+  CREATE INDEX IF NOT EXISTS idx_reward_tiers_reward_id
+    ON reward_tiers(reward_id);
+  CREATE INDEX IF NOT EXISTS idx_reward_tiers_deleted_at
+    ON reward_tiers(deleted_at);
   CREATE INDEX IF NOT EXISTS idx_coin_transactions_timestamp
     ON coin_transactions(timestamp DESC);
 `

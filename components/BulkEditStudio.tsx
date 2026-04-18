@@ -118,8 +118,8 @@ export default function BulkEditStudio() {
   const currentIds = useMemo(() => ({
     habitIds: new Set(habitsData.habits.filter((habit) => !habit.isTask).map((habit) => habit.id)),
     taskIds: new Set(habitsData.habits.filter((habit) => habit.isTask).map((habit) => habit.id)),
-    rewardIds: new Set(wishlistData.items.map((reward) => reward.id)),
-  }), [habitsData.habits, wishlistData.items])
+    rewardIds: new Set(wishlistData.rewards.map((reward) => reward.id)),
+  }), [habitsData.habits, wishlistData.rewards])
 
   const validation = useMemo(() => {
     if (!deferredJsonInput.trim()) {

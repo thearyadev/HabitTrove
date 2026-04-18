@@ -30,9 +30,20 @@ describe('bulk edit payload', () => {
       rewards: [
         {
           id: 'reward-1',
-          name: 'Coffee',
+          name: 'Pizza',
           description: '',
-          coinCost: 25,
+          redemptionRule: {
+            window: 'weekly',
+            maxRedemptions: 1,
+          },
+          tiers: [
+            {
+              id: 'tier-1',
+              name: 'Slice',
+              coinCost: 10,
+              position: 0,
+            },
+          ],
         },
       ],
     })
@@ -41,11 +52,12 @@ describe('bulk edit payload', () => {
     expect(payload.tasks).toHaveLength(1)
     expect(payload.rewards).toHaveLength(1)
     expect(payload.tasks[0]?.id).toBe('task-1')
+    expect(payload.rewards[0]?.tiers[0]?.coinCost).toBe(10)
   })
 
   test('rejects duplicate ids across habits and tasks', () => {
     expect(() => parseBulkEditJson(JSON.stringify({
-      schemaVersion: 1,
+      schemaVersion: 2,
       habits: [
         {
           id: 'shared',
@@ -70,7 +82,7 @@ describe('bulk edit payload', () => {
 
   test('rejects incomplete quantity habits', () => {
     expect(() => parseBulkEditJson(JSON.stringify({
-      schemaVersion: 1,
+      schemaVersion: 2,
       habits: [
         {
           name: 'Run',
@@ -85,9 +97,51 @@ describe('bulk edit payload', () => {
     }))).toThrow(/quantityUnit/)
   })
 
+  test('rejects rewards without tiers', () => {
+    expect(() => parseBulkEditJson(JSON.stringify({
+      schemaVersion: 2,
+      habits: [],
+      tasks: [],
+      rewards: [
+        {
+          name: 'Pizza',
+          description: '',
+          redemptionRule: {
+            window: 'weekly',
+            maxRedemptions: 1,
+          },
+          tiers: [],
+        },
+      ],
+    }))).toThrow(/at least one tier/i)
+  })
+
+  test('rejects limited rewards without maxRedemptions', () => {
+    expect(() => parseBulkEditJson(JSON.stringify({
+      schemaVersion: 2,
+      habits: [],
+      tasks: [],
+      rewards: [
+        {
+          name: 'Pizza',
+          description: '',
+          redemptionRule: {
+            window: 'weekly',
+          },
+          tiers: [
+            {
+              name: 'Slice',
+              coinCost: 10,
+            },
+          ],
+        },
+      ],
+    }))).toThrow(/maxRedemptions/)
+  })
+
   test('maps quantity habit coinReward edits onto the live base rate when the formula is otherwise unchanged', () => {
     const payload = parseBulkEditJson(JSON.stringify({
-      schemaVersion: 1,
+      schemaVersion: 2,
       habits: [
         {
           id: 'habit-1',

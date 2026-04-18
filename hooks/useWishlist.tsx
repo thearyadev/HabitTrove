@@ -1,138 +1,117 @@
 import { useAtom } from 'jotai'
 import { useTranslations } from 'next-intl'
-import { wishlistAtom, coinsAtom } from '@/lib/atoms'
-import { saveWishlistItems, removeCoins } from '@/app/actions/data'
+import { coinsAtom, wishlistAtom } from '@/lib/atoms'
+import { redeemRewardTier as redeemRewardTierAction, saveWishlistItems } from '@/app/actions/data'
 import { toast } from '@/hooks/use-toast'
-import { WishlistItemType } from '@/lib/types'
+import { RewardDefinition, RewardTier } from '@/lib/types'
 import { celebrations } from '@/utils/celebrations'
-import { useCoins } from './useCoins'
+import { translateWithFallback } from '@/lib/i18n'
 
 export function useWishlist() {
-  const t = useTranslations('useWishlist');
+  const t = useTranslations('useWishlist')
+  const tx = (key: string, fallback: string, values?: Record<string, string | number>) =>
+    translateWithFallback(t, key, fallback, values)
   const [wishlist, setWishlist] = useAtom(wishlistAtom)
-  const [coins, setCoins] = useAtom(coinsAtom)
-  const { balance } = useCoins()
+  const [, setCoins] = useAtom(coinsAtom)
 
-  const addWishlistItem = async (item: Omit<WishlistItemType, 'id'>) => {
-    const newItem = { ...item, id: Date.now().toString() }
-    const newItems = [...wishlist.items, newItem]
-    const newWishListData = { items: newItems }
-    setWishlist(newWishListData)
-    await saveWishlistItems(newWishListData)
+  const addReward = async (reward: Omit<RewardDefinition, 'id'>) => {
+    const newReward = { ...reward, id: crypto.randomUUID() }
+    const newWishlistData = { rewards: [...wishlist.rewards, newReward] }
+    setWishlist(newWishlistData)
+    await saveWishlistItems(newWishlistData)
   }
 
-  const editWishlistItem = async (updatedItem: WishlistItemType) => {
-    const newItems = wishlist.items.map(item =>
-      item.id === updatedItem.id ? updatedItem : item
-    )
-    const newWishListData = { items: newItems }
-    setWishlist(newWishListData)
-    await saveWishlistItems(newWishListData)
+  const editReward = async (updatedReward: RewardDefinition) => {
+    const newWishlistData = {
+      rewards: wishlist.rewards.map((reward) => reward.id === updatedReward.id ? updatedReward : reward),
+    }
+    setWishlist(newWishlistData)
+    await saveWishlistItems(newWishlistData)
   }
 
-  const deleteWishlistItem = async (id: string) => {
-    const newItems = wishlist.items.filter(item => item.id !== id)
-    const newWishListData = { items: newItems }
-    setWishlist(newWishListData)
-    await saveWishlistItems(newWishListData)
+  const deleteReward = async (id: string) => {
+    const newWishlistData = {
+      rewards: wishlist.rewards.filter((reward) => reward.id !== id),
+    }
+    setWishlist(newWishlistData)
+    await saveWishlistItems(newWishlistData)
   }
 
-  const redeemWishlistItem = async (item: WishlistItemType) => {
-    if (balance >= item.coinCost) {
-      // Check if item has target completions and if we've reached the limit
-      if (item.targetCompletions && item.targetCompletions <= 0) {
-        toast({
-          title: t("redemptionLimitReachedTitle"),
-          description: t("redemptionLimitReachedDescription", { itemName: item.name }),
-          variant: "destructive",
-        })
-        return false
+  const archiveReward = async (id: string) => {
+    const newWishlistData = {
+      rewards: wishlist.rewards.map((reward) =>
+        reward.id === id ? { ...reward, archived: true } : reward
+      ),
+    }
+    setWishlist(newWishlistData)
+    await saveWishlistItems(newWishlistData)
+  }
+
+  const unarchiveReward = async (id: string) => {
+    const newWishlistData = {
+      rewards: wishlist.rewards.map((reward) =>
+        reward.id === id ? { ...reward, archived: false } : reward
+      ),
+    }
+    setWishlist(newWishlistData)
+    await saveWishlistItems(newWishlistData)
+  }
+
+  const redeemRewardTier = async (reward: RewardDefinition, tier: RewardTier) => {
+    const result = await redeemRewardTierAction({ rewardId: reward.id, tierId: tier.id })
+
+    if (!result.success) {
+      switch (result.reason) {
+        case 'INSUFFICIENT_COINS':
+          toast({
+            title: t('notEnoughCoinsTitle'),
+            description: t('notEnoughCoinsDescription', { coinsNeeded: result.coinsNeeded ?? tier.coinCost }),
+            variant: 'destructive',
+          })
+          break
+        case 'LIMIT_REACHED':
+          toast({
+            title: t('redemptionLimitReachedTitle'),
+            description: t('redemptionLimitReachedDescription', { itemName: reward.name }),
+            variant: 'destructive',
+          })
+          break
+        case 'ARCHIVED':
+        case 'NOT_FOUND':
+          toast({
+            title: tx('rewardUnavailableTitle', 'Reward unavailable'),
+            description: tx('rewardUnavailableDescription', 'This reward is no longer available to redeem.'),
+            variant: 'destructive',
+          })
+          break
       }
 
-      const data = await removeCoins({
-        amount: item.coinCost,
-        description: `Redeemed reward: ${item.name}`,
-        type: 'WISH_REDEMPTION',
-        relatedItemId: item.id
-      })
-      setCoins(data)
-
-      // Update target completions if set
-      if (item.targetCompletions !== undefined) {
-        const newItems = wishlist.items.map(wishlistItem => {
-          if (wishlistItem.id === item.id) {
-            const newTarget = wishlistItem.targetCompletions! - 1
-            // If target reaches 0, archive the item
-            if (newTarget <= 0) {
-              return { 
-                ...wishlistItem, 
-                targetCompletions: undefined,
-                archived: true
-              }
-            }
-            return { 
-              ...wishlistItem, 
-              targetCompletions: newTarget 
-            }
-          }
-          return wishlistItem
-        })
-        const newWishListData = { items: newItems }
-        setWishlist(newWishListData)
-        await saveWishlistItems(newWishListData)
-      }
-
-      // Randomly choose a celebration effect
-      const celebrationEffects = [
-        celebrations.emojiParty
-      ]
-      const randomEffect = celebrationEffects[Math.floor(Math.random() * celebrationEffects.length)]
-      randomEffect()
-
-      toast({
-        title: t("rewardRedeemedTitle"),
-        description: t("rewardRedeemedDescription", { itemName: item.name, itemCoinCost: item.coinCost }),
-      })
-
-      return true
-    } else {
-      toast({
-        title: t("notEnoughCoinsTitle"),
-        description: t("notEnoughCoinsDescription", { coinsNeeded: item.coinCost - balance }),
-        variant: "destructive",
-      })
       return false
     }
-  }
 
-  const canRedeem = (cost: number) => balance >= cost
+    setCoins(result.coins)
+    setWishlist(result.wishlist)
+    celebrations.emojiParty()
 
-  const archiveWishlistItem = async (id: string) => {
-    const newItems = wishlist.items.map(item =>
-      item.id === id ? { ...item, archived: true } : item
-    )
-    const newWishListData = { items: newItems }
-    setWishlist(newWishListData)
-    await saveWishlistItems(newWishListData)
-  }
+    toast({
+      title: t('rewardRedeemedTitle'),
+      description: t('rewardRedeemedDescription', {
+        itemName: reward.name,
+        tierName: tier.name,
+        itemCoinCost: tier.coinCost,
+      }),
+    })
 
-  const unarchiveWishlistItem = async (id: string) => {
-    const newItems = wishlist.items.map(item =>
-      item.id === id ? { ...item, archived: false } : item
-    )
-    const newWishListData = { items: newItems }
-    setWishlist(newWishListData)
-    await saveWishlistItems(newWishListData)
+    return true
   }
 
   return {
-    addWishlistItem,
-    editWishlistItem,
-    deleteWishlistItem,
-    redeemWishlistItem,
-    archiveWishlistItem,
-    unarchiveWishlistItem,
-    canRedeem,
-    wishlistItems: wishlist.items
+    addReward,
+    editReward,
+    deleteReward,
+    archiveReward,
+    unarchiveReward,
+    redeemRewardTier,
+    wishlistRewards: wishlist.rewards,
   }
 }

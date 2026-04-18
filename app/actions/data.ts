@@ -7,11 +7,11 @@ import {
   CoinsData,
   CoinTransaction,
   HabitsData,
+  RewardDefinition,
   ServerSettings,
   Settings,
   TransactionType,
   WishlistData,
-  WishlistItemType,
 } from '@/lib/types'
 import {
   BulkEditPayload,
@@ -26,6 +26,7 @@ import { getCoins, insertCoinTransaction, saveCoinSnapshot, updateTransactionNot
 import { getHabits, saveHabits, syncHabitDefinitions } from '@/lib/db/repos/habits'
 import { getSettings, saveSettingsRecord } from '@/lib/db/repos/settings'
 import { getWishlist, saveWishlist, syncWishlistDefinitions } from '@/lib/db/repos/wishlist'
+import { getRewardWindowBounds } from '@/lib/rewards'
 
 export async function triggerManualBackup(): Promise<{ success: boolean; message: string }> {
   return { success: false, message: 'Backups are disabled in the single-user build.' }
@@ -35,9 +36,9 @@ export async function loadWishlistData(): Promise<WishlistData> {
   return getWishlist()
 }
 
-export async function loadWishlistItems(): Promise<WishlistItemType[]> {
+export async function loadWishlistItems(): Promise<RewardDefinition[]> {
   const data = await loadWishlistData()
-  return data.items
+  return data.rewards
 }
 
 export async function saveWishlistItems(data: WishlistData): Promise<void> {
@@ -60,7 +61,7 @@ export async function exportBulkEditData(): Promise<BulkEditPayload> {
 
   return createBulkEditPayload({
     habits: habits.habits,
-    rewards: wishlist.items,
+    rewards: wishlist.rewards,
   })
 }
 
@@ -80,7 +81,7 @@ export async function syncBulkEditData(jsonInput: string): Promise<{
   }
 }> {
   const currentHabits = getHabits().habits
-  const currentRewards = getWishlist().items
+  const currentRewards = getWishlist().rewards
   const payload = reconcileBulkEditPayloadWithCurrentCatalog(
     parseBulkEditJson(jsonInput),
     currentHabits
@@ -110,6 +111,11 @@ export async function syncBulkEditData(jsonInput: string): Promise<{
   const rewardDefinitions = payload.rewards.map((reward) => ({
     ...reward,
     id: reward.id ?? randomUUID(),
+    tiers: reward.tiers.map((tier, index) => ({
+      ...tier,
+      id: tier.id ?? randomUUID(),
+      position: tier.position ?? index,
+    })),
   }))
 
   withTransaction((db) => {
@@ -147,12 +153,14 @@ export async function addCoins({
   description,
   type = 'MANUAL_ADJUSTMENT',
   relatedItemId,
+  relatedSubItemId,
   note,
 }: {
   amount: number
   description: string
   type?: TransactionType
   relatedItemId?: string
+  relatedSubItemId?: string
   note?: string
 }): Promise<CoinsData> {
   insertCoinTransaction({
@@ -162,6 +170,7 @@ export async function addCoins({
     description,
     timestamp: d2t({ dateTime: getNow({}) }),
     relatedItemId,
+    relatedSubItemId,
     note: note?.trim() ? note : undefined,
   } satisfies CoinTransaction)
 
@@ -181,12 +190,14 @@ export async function removeCoins({
   description,
   type = 'MANUAL_ADJUSTMENT',
   relatedItemId,
+  relatedSubItemId,
   note,
 }: {
   amount: number
   description: string
   type?: TransactionType
   relatedItemId?: string
+  relatedSubItemId?: string
   note?: string
 }): Promise<CoinsData> {
   insertCoinTransaction({
@@ -196,6 +207,7 @@ export async function removeCoins({
     description,
     timestamp: d2t({ dateTime: getNow({}) }),
     relatedItemId,
+    relatedSubItemId,
     note: note?.trim() ? note : undefined,
   } satisfies CoinTransaction)
 
@@ -205,6 +217,123 @@ export async function removeCoins({
 export async function updateTransactionNote(transactionId: string, note: string): Promise<CoinsData> {
   updateTransactionNoteRecord(transactionId, note.trim() || undefined)
   return getCoins()
+}
+
+export async function redeemRewardTier({
+  rewardId,
+  tierId,
+}: {
+  rewardId: string
+  tierId: string
+}): Promise<
+  | {
+      success: true
+      coins: CoinsData
+      wishlist: WishlistData
+    }
+  | {
+      success: false
+      reason: 'NOT_FOUND' | 'ARCHIVED' | 'INSUFFICIENT_COINS' | 'LIMIT_REACHED'
+      coinsNeeded?: number
+    }
+> {
+  const settings = getSettings()
+
+  const result = withTransaction((db) => {
+    const reward = db.prepare(`
+      SELECT id, name, archived, limit_window, max_redemptions
+      FROM rewards
+      WHERE id = ? AND deleted_at IS NULL
+    `).get(rewardId) as {
+      id: string
+      name: string
+      archived: number
+      limit_window: RewardDefinition['redemptionRule']['window']
+      max_redemptions: number | null
+    } | undefined
+
+    if (!reward) {
+      return { success: false as const, reason: 'NOT_FOUND' as const }
+    }
+
+    if (reward.archived === 1) {
+      return { success: false as const, reason: 'ARCHIVED' as const }
+    }
+
+    const tier = db.prepare(`
+      SELECT id, name, coin_cost
+      FROM reward_tiers
+      WHERE id = ? AND reward_id = ? AND deleted_at IS NULL
+    `).get(tierId, rewardId) as {
+      id: string
+      name: string
+      coin_cost: number
+    } | undefined
+
+    if (!tier) {
+      return { success: false as const, reason: 'NOT_FOUND' as const }
+    }
+
+    const balanceRow = db.prepare(`
+      SELECT COALESCE(SUM(amount), 0) AS balance
+      FROM coin_transactions
+    `).get() as { balance: number }
+
+    if (balanceRow.balance < tier.coin_cost) {
+      return {
+        success: false as const,
+        reason: 'INSUFFICIENT_COINS' as const,
+        coinsNeeded: tier.coin_cost - balanceRow.balance,
+      }
+    }
+
+    if (reward.limit_window !== 'unlimited') {
+      const bounds = getRewardWindowBounds({
+        rule: {
+          window: reward.limit_window,
+          maxRedemptions: reward.max_redemptions ?? undefined,
+        },
+        timezone: settings.system.timezone,
+        weekStartDay: settings.system.weekStartDay,
+      })
+
+      const countRow = db.prepare(`
+        SELECT COUNT(*) AS count
+        FROM coin_transactions
+        WHERE type = 'WISH_REDEMPTION'
+          AND related_item_id = ?
+          AND timestamp >= ?
+          AND timestamp < ?
+      `).get(reward.id, bounds.startsAt, bounds.endsAt) as { count: number }
+
+      const maxRedemptions = reward.max_redemptions ?? 1
+      if (countRow.count >= maxRedemptions) {
+        return { success: false as const, reason: 'LIMIT_REACHED' as const }
+      }
+    }
+
+    insertCoinTransaction({
+      id: randomUUID(),
+      amount: -Math.abs(tier.coin_cost),
+      type: 'WISH_REDEMPTION',
+      description: `Redeemed reward: ${reward.name} - ${tier.name}`,
+      timestamp: d2t({ dateTime: getNow({}) }),
+      relatedItemId: reward.id,
+      relatedSubItemId: tier.id,
+    })
+
+    return { success: true as const }
+  })
+
+  if (!result.success) {
+    return result
+  }
+
+  return {
+    success: true,
+    coins: getCoins(),
+    wishlist: getWishlist(),
+  }
 }
 
 export async function uploadAvatar(formData: FormData): Promise<string> {

@@ -33,15 +33,29 @@ export type Habit = {
 
 export type Freq = 'daily' | 'weekly' | 'monthly' | 'yearly'
 
-export type WishlistItemType = {
+export type RewardLimitWindow = 'unlimited' | 'daily' | 'weekly' | 'monthly'
+
+export type RewardTier = {
+  id: string
+  name: string
+  coinCost: number
+  position: number
+}
+
+export type RewardRedemptionRule = {
+  window: RewardLimitWindow
+  maxRedemptions?: number
+}
+
+export type RewardDefinition = {
   id: string
   name: string
   description: string
-  coinCost: number
   archived?: boolean // mark the wishlist item as archived
-  targetCompletions?: number // Optional field, infinity when unset
   link?: string // Optional URL to external resource
   drawing?: string // Optional JSON string of drawing data
+  redemptionRule: RewardRedemptionRule
+  tiers: RewardTier[]
 }
 
 export type TransactionType = 'HABIT_COMPLETION' | 'HABIT_UNDO' | 'WISH_REDEMPTION' | 'MANUAL_ADJUSTMENT' | 'TASK_COMPLETION' | 'TASK_UNDO';
@@ -53,6 +67,7 @@ export interface CoinTransaction {
   description: string;
   timestamp: string;
   relatedItemId?: string;
+  relatedSubItemId?: string;
   note?: string;
 }
 
@@ -69,7 +84,7 @@ export interface CoinsData {
 // Default value functions
 // Data container types
 export interface WishlistData {
-  items: WishlistItemType[];
+  rewards: RewardDefinition[];
 }
 
 export const getDefaultHabitsData = (): HabitsData => ({
@@ -83,7 +98,7 @@ export const getDefaultCoinsData = (): CoinsData => ({
 });
 
 export const getDefaultWishlistData = (): WishlistData => ({
-  items: []
+  rewards: []
 });
 
 export const getDefaultSettings = (): Settings => ({

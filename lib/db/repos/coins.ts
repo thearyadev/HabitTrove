@@ -8,6 +8,7 @@ type TransactionRow = {
   description: string
   timestamp: string
   related_item_id: string | null
+  related_sub_item_id: string | null
   note: string | null
 }
 
@@ -19,6 +20,7 @@ function mapTransactions(rows: TransactionRow[]): CoinTransaction[] {
     description: row.description,
     timestamp: row.timestamp,
     relatedItemId: row.related_item_id ?? undefined,
+    relatedSubItemId: row.related_sub_item_id ?? undefined,
     note: row.note ?? undefined,
   }))
 }
@@ -30,7 +32,7 @@ function calculateBalance(transactions: CoinTransaction[]) {
 export function getCoins(): CoinsData {
   const db = getDatabase()
   const rows = db.prepare(`
-    SELECT id, amount, type, description, timestamp, related_item_id, note
+    SELECT id, amount, type, description, timestamp, related_item_id, related_sub_item_id, note
     FROM coin_transactions
     ORDER BY timestamp DESC, id DESC
   `).all() as TransactionRow[]
@@ -56,6 +58,7 @@ export function saveCoinSnapshot(data: CoinsData) {
           description,
           timestamp,
           related_item_id,
+          related_sub_item_id,
           note
         ) VALUES (
           @id,
@@ -64,6 +67,7 @@ export function saveCoinSnapshot(data: CoinsData) {
           @description,
           @timestamp,
           @related_item_id,
+          @related_sub_item_id,
           @note
         )
         ON CONFLICT(id) DO UPDATE SET
@@ -72,6 +76,7 @@ export function saveCoinSnapshot(data: CoinsData) {
           description = excluded.description,
           timestamp = excluded.timestamp,
           related_item_id = excluded.related_item_id,
+          related_sub_item_id = excluded.related_sub_item_id,
           note = excluded.note
       `).run({
         id: transaction.id,
@@ -80,6 +85,7 @@ export function saveCoinSnapshot(data: CoinsData) {
         description: transaction.description,
         timestamp: transaction.timestamp,
         related_item_id: transaction.relatedItemId ?? null,
+        related_sub_item_id: transaction.relatedSubItemId ?? null,
         note: transaction.note ?? null,
       })
     }
@@ -103,6 +109,7 @@ export function insertCoinTransaction(transaction: CoinTransaction) {
       description,
       timestamp,
       related_item_id,
+      related_sub_item_id,
       note
     ) VALUES (
       @id,
@@ -111,6 +118,7 @@ export function insertCoinTransaction(transaction: CoinTransaction) {
       @description,
       @timestamp,
       @related_item_id,
+      @related_sub_item_id,
       @note
     )
   `).run({
@@ -120,6 +128,7 @@ export function insertCoinTransaction(transaction: CoinTransaction) {
     description: transaction.description,
     timestamp: transaction.timestamp,
     related_item_id: transaction.relatedItemId ?? null,
+    related_sub_item_id: transaction.relatedSubItemId ?? null,
     note: transaction.note ?? null,
   })
 }

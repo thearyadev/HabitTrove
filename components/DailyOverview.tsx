@@ -10,8 +10,10 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { useAtom } from 'jotai'
 import { useTranslations } from 'next-intl'
-import { settingsAtom, completedHabitsMapAtom, browserSettingsAtom, hasTasksAtom } from '@/lib/atoms'
+import { settingsAtom, completedHabitsMapAtom, browserSettingsAtom, coinsAtom, hasTasksAtom } from '@/lib/atoms'
 import { formatDecimal, getCompletionCountForDate, getHabitRewardValue, getNow, getTodayInTimezone, isHabitDue, isQuantityHabit, isTaskOverdue } from '@/lib/utils'
+import { canAffordAnyRewardTier, getCheapestRewardTier, getRewardUsageSummary } from '@/lib/rewards'
+import { translateWithFallback } from '@/lib/i18n'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -21,8 +23,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { Progress } from '@/components/ui/progress'
-import { WishlistItemType } from '@/lib/types'
-import { Habit } from '@/lib/types'
+import { Habit, RewardDefinition } from '@/lib/types'
 import Linkify from './linkify'
 import { useHabits } from '@/hooks/useHabits'
 import AddEditHabitModal from './AddEditHabitModal'
@@ -34,7 +35,7 @@ import LogHabitCompletionModal from './LogHabitCompletionModal'
 
 interface UpcomingItemsProps {
   habits: Habit[]
-  wishlistItems: WishlistItemType[]
+  wishlistRewards: RewardDefinition[]
   coinBalance: number
 }
 
@@ -394,13 +395,16 @@ const ItemSection = ({
 
 export default function DailyOverview({
   habits,
-  wishlistItems,
+  wishlistRewards,
   coinBalance,
 }: UpcomingItemsProps) {
   const t = useTranslations('DailyOverview');
+  const tx = (key: string, fallback: string, values?: Record<string, string | number>) =>
+    translateWithFallback(t, key, fallback, values)
   const { saveHabit } = useHabits()
   const [settings] = useAtom(settingsAtom)
   const [browserSettings, setBrowserSettings] = useAtom(browserSettingsAtom)
+  const [coins] = useAtom(coinsAtom)
 
   const timezone = settings.system.timezone
   const todayDateObj = getNow({ timezone })
@@ -416,21 +420,32 @@ export default function DailyOverview({
     isHabitDue({ habit, timezone, date: todayDateObj })
   )
 
-  // Get all wishlist items sorted by redeemable status (non-redeemable first) then by coin cost
-  // Filter out archived wishlist items
-  const sortedWishlistItems = wishlistItems
-    .filter(item => !item.archived)
-    .sort((a, b) => {
-      const aRedeemable = a.coinCost <= coinBalance
-      const bRedeemable = b.coinCost <= coinBalance
+  const sortedWishlistRewards = wishlistRewards
+    .filter((reward) => !reward.archived)
+    .map((reward) => {
+      const cheapestTier = getCheapestRewardTier(reward)
+      const usage = getRewardUsageSummary({
+        reward,
+        transactions: coins.transactions,
+        timezone,
+        weekStartDay: settings.system.weekStartDay,
+      })
+      const redeemable = !usage.isExhausted && canAffordAnyRewardTier(reward, coinBalance)
 
-      // Non-redeemable items first
-      if (aRedeemable !== bRedeemable) {
-        return aRedeemable ? 1 : -1
+      return {
+        reward,
+        cheapestTier,
+        usage,
+        redeemable,
+      }
+    })
+    .filter((entry) => !!entry.cheapestTier)
+    .sort((a, b) => {
+      if (a.redeemable !== b.redeemable) {
+        return a.redeemable ? 1 : -1
       }
 
-      // Then sort by coin cost (lower cost first)
-      return a.coinCost - b.coinCost
+      return (a.cheapestTier?.coinCost ?? 0) - (b.cheapestTier?.coinCost ?? 0)
     })
 
   const [hasTasks] = useAtom(hasTasksAtom)
@@ -477,75 +492,81 @@ export default function DailyOverview({
                 <h3 className="font-semibold">{t('wishlistGoalsTitle')}</h3>
                 <Badge variant="secondary">
                   {t('redeemableBadgeLabel', {
-                    count: wishlistItems.filter(item => item.coinCost <= coinBalance).length,
-                    total: wishlistItems.length
+                    count: sortedWishlistRewards.filter((entry) => entry.redeemable).length,
+                    total: sortedWishlistRewards.length,
                   })}
                 </Badge>
               </div>
               <div>
                 <div className={`space-y-3 transition-all duration-300 ease-in-out ${browserSettings.expandedWishlist ? 'max-h-none' : 'max-h-[200px]'} overflow-hidden`}>
-                  {sortedWishlistItems.length === 0 ? (
+                  {sortedWishlistRewards.length === 0 ? (
                     <div className="text-center text-muted-foreground text-sm py-4">
                       {t('noWishlistItemsMessage')}
                     </div>
                   ) : (
                     <>
-                      {sortedWishlistItems
+                      {sortedWishlistRewards
                         .slice(0, browserSettings.expandedWishlist ? undefined : 5)
-                        .map((item) => {
-                          const isRedeemable = item.coinCost <= coinBalance
+                        .map(({ reward, cheapestTier, usage, redeemable }) => {
+                          const tierCost = cheapestTier?.coinCost ?? 0
                           return (
                             <Link
-                              key={item.id}
-                              href={`/wishlist?highlight=${item.id}`}
+                              key={reward.id}
+                              href={`/wishlist?highlight=${reward.id}`}
                               className={cn(
                                 "block p-3 rounded-md hover:bg-secondary/30 transition-colors",
-                                isRedeemable ? 'bg-green-500/10' : 'bg-secondary/20'
+                                redeemable ? 'bg-green-500/10' : 'bg-secondary/20'
                               )}
                             >
                               <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
                                   <span className="text-sm">
-                                    <Linkify>{item.name}</Linkify>
+                                    <Linkify>{reward.name}</Linkify>
                                   </span>
-                                  {item.drawing && (
+                                  {reward.drawing && (
                                     <DrawingDisplay
-                                      drawingData={item.drawing}
+                                      drawingData={reward.drawing}
                                       width={40}
                                       height={26}
                                       className="border-0"
                                     />
                                   )}
+                                  {usage.isExhausted && (
+                                    <Badge variant="secondary" className="text-[10px]">
+                                      {tx('rewardLimitReachedBadge', 'Limit reached')}
+                                    </Badge>
+                                  )}
                                 </div>
                                 <span className="text-xs flex items-center">
                                   <Coins className={cn(
                                     "h-3 w-3 mr-1 transition-all",
-                                    isRedeemable
+                                    redeemable
                                       ? "text-yellow-500 drop-shadow-[0_0_2px_rgba(234,179,8,0.3)]"
                                       : "text-gray-400"
                                   )} />
                                   <span className={cn(
                                     "transition-all",
-                                    isRedeemable
+                                    redeemable
                                       ? "text-yellow-500 font-medium"
                                       : "text-gray-400"
                                   )}>
-                                    {item.coinCost}
+                                    {tx('fromCoinsMessage', 'From {amount}', { amount: tierCost })}
                                   </span>
                                 </span>
                               </div>
                               <Progress
-                                value={(coinBalance / item.coinCost) * 100}
+                                value={Math.min(100, (coinBalance / Math.max(tierCost, 1)) * 100)}
                                 className={cn(
                                   "h-2",
-                                  isRedeemable ? "bg-green-500/20" : ""
+                                  redeemable ? "bg-green-500/20" : ""
                                 )}
                               />
                               <p className="text-xs text-muted-foreground mt-2">
-                                {isRedeemable
-                                  ? t('readyToRedeemMessage')
-                                  : t('coinsToGoMessage', { amount: item.coinCost - coinBalance })
-                                }
+                                {usage.isExhausted
+                                  ? tx('rewardLimitReachedMessage', 'Redeemable again next reset')
+                                  : redeemable
+                                    ? t('readyToRedeemMessage')
+                                    : t('coinsToGoMessage', { amount: tierCost - coinBalance })}
                               </p>
                             </Link>
                           )

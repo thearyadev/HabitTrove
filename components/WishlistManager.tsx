@@ -1,98 +1,114 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { useWishlist } from '@/hooks/useWishlist'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useAtom } from 'jotai'
 import { useTranslations } from 'next-intl'
-import { Plus, Gift } from 'lucide-react'
+import { Gift, Plus } from 'lucide-react'
+import { settingsAtom } from '@/lib/atoms'
+import { getRewardUsageSummary } from '@/lib/rewards'
+import { translateWithFallback } from '@/lib/i18n'
+import { openWindow } from '@/lib/utils'
+import { useCoins } from '@/hooks/useCoins'
+import { useWishlist } from '@/hooks/useWishlist'
+import { RewardDefinition, RewardTier } from '@/lib/types'
+import { toast } from '@/hooks/use-toast'
 import EmptyState from './EmptyState'
-import { Button } from '@/components/ui/button'
 import WishlistItem from './WishlistItem'
 import AddEditWishlistItemModal from './AddEditWishlistItemModal'
 import ConfirmDialog from './ConfirmDialog'
-import { WishlistItemType } from '@/lib/types'
-import { openWindow } from '@/lib/utils'
-import { toast } from '@/hooks/use-toast'
+import { Button } from '@/components/ui/button'
 
 export default function WishlistManager() {
   const t = useTranslations('WishlistManager')
+  const tx = (key: string, fallback: string) => translateWithFallback(t, key, fallback)
+  const [settings] = useAtom(settingsAtom)
+  const { balance, transactions } = useCoins()
   const {
-    addWishlistItem,
-    editWishlistItem,
-    deleteWishlistItem,
-    redeemWishlistItem,
-    archiveWishlistItem,
-    unarchiveWishlistItem,
-    canRedeem,
-    wishlistItems
+    addReward,
+    editReward,
+    deleteReward,
+    redeemRewardTier,
+    archiveReward,
+    unarchiveReward,
+    wishlistRewards,
   } = useWishlist()
 
-  const activeItems = wishlistItems.filter(item => !item.archived)
-  const archivedItems = wishlistItems.filter(item => item.archived)
+  const activeRewards = wishlistRewards.filter((reward) => !reward.archived)
+  const archivedRewards = wishlistRewards.filter((reward) => reward.archived)
 
-  const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null)
-  const [recentlyRedeemedId, setRecentlyRedeemedId] = useState<string | null>(null)
+  const [highlightedRewardId, setHighlightedRewardId] = useState<string | null>(null)
+  const [recentlyRedeemedRewardId, setRecentlyRedeemedRewardId] = useState<string | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [editingItem, setEditingItem] = useState<WishlistItemType | null>(null)
-  const [deleteConfirmation, setDeleteConfirmation] = useState<{ isOpen: boolean, itemId: string | null }>({
+  const [editingReward, setEditingReward] = useState<RewardDefinition | null>(null)
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ isOpen: boolean; rewardId: string | null }>({
     isOpen: false,
-    itemId: null
+    rewardId: null,
   })
 
-  const itemRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const rewardRefs = useRef<Record<string, HTMLDivElement | null>>({})
+
+  const usageByRewardId = useMemo(() => (
+    new Map(wishlistRewards.map((reward) => [reward.id, getRewardUsageSummary({
+      reward,
+      transactions,
+      timezone: settings.system.timezone,
+      weekStartDay: settings.system.weekStartDay,
+    })]))
+  ), [settings.system.timezone, settings.system.weekStartDay, transactions, wishlistRewards])
 
   useEffect(() => {
-    // Check URL for highlight parameter
     const params = new URLSearchParams(window.location.search)
     const highlightId = params.get('highlight')
-    if (highlightId) {
-      setHighlightedItemId(highlightId)
-      // Scroll the element into view after a short delay to ensure rendering
-      setTimeout(() => {
-        const element = itemRefs.current[highlightId]
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        }
-      }, 100)
-      // Remove highlight after animation
-      setTimeout(() => setHighlightedItemId(null), 2000)
+    if (!highlightId) {
+      return
     }
+
+    setHighlightedRewardId(highlightId)
+    setTimeout(() => {
+      rewardRefs.current[highlightId]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 100)
+    setTimeout(() => setHighlightedRewardId(null), 2000)
   }, [])
 
+  const handleRedeemTier = async (reward: RewardDefinition, tier: RewardTier) => {
+    const success = await redeemRewardTier(reward, tier)
+    if (!success) {
+      return
+    }
 
-  const handleRedeem = async (item: WishlistItemType) => {
-    const success = await redeemWishlistItem(item)
-    if (success) {
-      setRecentlyRedeemedId(item.id)
+    setRecentlyRedeemedRewardId(reward.id)
+    setTimeout(() => setRecentlyRedeemedRewardId(null), 3000)
+
+    if (reward.link) {
       setTimeout(() => {
-        setRecentlyRedeemedId(null)
-      }, 3000)
-
-      if (item.link) {
-        setTimeout(() => {
-          const opened = openWindow(item.link!)
-          if (!opened) {
-            toast({
-              title: t('popupBlockedTitle'),
-              description: t('popupBlockedDescription'),
-              variant: "destructive"
-            })
-          }
-        }, 300)
-      }
+        const opened = openWindow(reward.link!)
+        if (!opened) {
+          toast({
+            title: t('popupBlockedTitle'),
+            description: t('popupBlockedDescription'),
+            variant: 'destructive',
+          })
+        }
+      }, 300)
     }
   }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-xl xs:text-3xl font-bold">{t('title')}</h1>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-semibold tracking-tight">{t('title')}</h1>
+          <p className="text-sm text-muted-foreground">{tx('subtitle', 'Set up flexible rewards with multiple ways to cash out the same craving.')}</p>
+        </div>
         <Button onClick={() => setIsModalOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" /> {t('addRewardButton')}
+          <Plus className="h-4 w-4" />
+          {t('addRewardButton')}
         </Button>
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
-        {activeItems.length === 0 ? (
-          <div className="col-span-1 lg:col-span-2">
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        {activeRewards.length === 0 ? (
+          <div className="xl:col-span-2">
             <EmptyState
               icon={Gift}
               title={t('emptyStateTitle')}
@@ -100,76 +116,79 @@ export default function WishlistManager() {
             />
           </div>
         ) : (
-          activeItems.map((item) => (
+          activeRewards.map((reward) => (
             <div
-              key={item.id}
-              ref={(el) => {
-                if (el) {
-                  itemRefs.current[item.id] = el
-                }
+              key={reward.id}
+              ref={(element) => {
+                rewardRefs.current[reward.id] = element
               }}
             >
               <WishlistItem
-                item={item}
-                isHighlighted={item.id === highlightedItemId}
-                isRecentlyRedeemed={item.id === recentlyRedeemedId}
+                reward={reward}
+                balance={balance}
+                usage={usageByRewardId.get(reward.id)!}
+                isHighlighted={highlightedRewardId === reward.id}
+                isRecentlyRedeemed={recentlyRedeemedRewardId === reward.id}
                 onEdit={() => {
-                  setEditingItem(item)
+                  setEditingReward(reward)
                   setIsModalOpen(true)
                 }}
-                onDelete={() => setDeleteConfirmation({ isOpen: true, itemId: item.id })}
-                onRedeem={() => handleRedeem(item)}
-                onArchive={() => archiveWishlistItem(item.id)}
-                onUnarchive={() => unarchiveWishlistItem(item.id)}
-                canRedeem={canRedeem(item.coinCost)}
+                onDelete={() => setDeleteConfirmation({ isOpen: true, rewardId: reward.id })}
+                onRedeemTier={(tier) => handleRedeemTier(reward, tier)}
+                onArchive={() => archiveReward(reward.id)}
+                onUnarchive={() => unarchiveReward(reward.id)}
               />
             </div>
           ))
         )}
 
-        {archivedItems.length > 0 && (
+        {archivedRewards.length > 0 && (
           <>
-            <div className="col-span-1 lg:col-span-2 relative flex items-center my-6">
-              <div className="flex-grow border-t border-gray-300 dark:border-gray-600" />
-              <span className="mx-4 text-sm text-gray-500 dark:text-gray-400">{t('archivedSectionTitle')}</span>
-              <div className="flex-grow border-t border-gray-300 dark:border-gray-600" />
+            <div className="xl:col-span-2 relative flex items-center py-4">
+              <div className="flex-grow border-t border-border" />
+              <span className="mx-4 text-sm text-muted-foreground">{t('archivedSectionTitle')}</span>
+              <div className="flex-grow border-t border-border" />
             </div>
-            {archivedItems.map((item) => (
+
+            {archivedRewards.map((reward) => (
               <WishlistItem
-                key={item.id}
-                item={item}
+                key={reward.id}
+                reward={reward}
+                balance={balance}
+                usage={usageByRewardId.get(reward.id)!}
                 onEdit={() => {
-                  setEditingItem(item)
+                  setEditingReward(reward)
                   setIsModalOpen(true)
                 }}
-                onDelete={() => setDeleteConfirmation({ isOpen: true, itemId: item.id })}
-                onRedeem={() => handleRedeem(item)}
-                onArchive={() => archiveWishlistItem(item.id)}
-                onUnarchive={() => unarchiveWishlistItem(item.id)}
-                canRedeem={canRedeem(item.coinCost)}
+                onDelete={() => setDeleteConfirmation({ isOpen: true, rewardId: reward.id })}
+                onRedeemTier={(tier) => handleRedeemTier(reward, tier)}
+                onArchive={() => archiveReward(reward.id)}
+                onUnarchive={() => unarchiveReward(reward.id)}
               />
             ))}
           </>
         )}
       </div>
-      {isModalOpen &&
+
+      {isModalOpen && (
         <AddEditWishlistItemModal
           isOpen={isModalOpen}
           setIsOpen={setIsModalOpen}
-          editingItem={editingItem}
-          setEditingItem={setEditingItem}
-          addWishlistItem={addWishlistItem}
-          editWishlistItem={editWishlistItem}
+          editingItem={editingReward}
+          setEditingItem={setEditingReward}
+          addReward={addReward}
+          editReward={editReward}
         />
-      }
+      )}
+
       <ConfirmDialog
         isOpen={deleteConfirmation.isOpen}
-        onClose={() => setDeleteConfirmation({ isOpen: false, itemId: null })}
+        onClose={() => setDeleteConfirmation({ isOpen: false, rewardId: null })}
         onConfirm={() => {
-          if (deleteConfirmation.itemId) {
-            deleteWishlistItem(deleteConfirmation.itemId)
+          if (deleteConfirmation.rewardId) {
+            deleteReward(deleteConfirmation.rewardId)
           }
-          setDeleteConfirmation({ isOpen: false, itemId: null })
+          setDeleteConfirmation({ isOpen: false, rewardId: null })
         }}
         title={t('deleteDialogTitle')}
         message={t('deleteDialogMessage')}

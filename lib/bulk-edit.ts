@@ -1,8 +1,8 @@
 import { z } from 'zod'
 import { MAX_COIN_LIMIT } from '@/lib/constants'
-import { Habit, WishlistItemType } from '@/lib/types'
+import { Habit, RewardDefinition } from '@/lib/types'
 
-export const BULK_EDIT_SCHEMA_VERSION = 1
+export const BULK_EDIT_SCHEMA_VERSION = 2
 
 const optionalTrimmedString = z.string().trim().min(1).optional()
 const optionalUrlString = z.string().trim().optional().refine((value) => {
@@ -80,15 +80,58 @@ const bulkEditHabitSchema = z.object({
   }
 })
 
+const bulkEditRewardTierSchema = z.object({
+  id: optionalTrimmedString,
+  name: z.string().trim().min(1, 'Tier name is required.'),
+  coinCost: z.number().int().min(1).max(MAX_COIN_LIMIT),
+  position: z.number().int().min(0).optional(),
+})
+
+const bulkEditRewardRedemptionRuleSchema = z.object({
+  window: z.enum(['unlimited', 'daily', 'weekly', 'monthly']),
+  maxRedemptions: z.number().int().min(1).optional(),
+}).superRefine((value, ctx) => {
+  if (value.window === 'unlimited') {
+    return
+  }
+
+  if (value.maxRedemptions === undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Limited rewards require `maxRedemptions`.',
+      path: ['maxRedemptions'],
+    })
+  }
+})
+
 const bulkEditRewardSchema = z.object({
   id: optionalTrimmedString,
   name: z.string().trim().min(1, 'Name is required.'),
   description: z.string().default(''),
-  coinCost: z.number().int().min(1).max(MAX_COIN_LIMIT),
   archived: z.boolean().optional(),
-  targetCompletions: z.number().int().min(1).optional(),
   link: optionalUrlString,
   drawing: optionalTrimmedString,
+  redemptionRule: bulkEditRewardRedemptionRuleSchema,
+  tiers: z.array(bulkEditRewardTierSchema).min(1, 'Rewards require at least one tier.'),
+}).superRefine((value, ctx) => {
+  const tierIds = new Set<string>()
+
+  value.tiers.forEach((tier, index) => {
+    if (!tier.id) {
+      return
+    }
+
+    if (tierIds.has(tier.id)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Duplicate tier id \`${tier.id}\`.`,
+        path: ['tiers', index, 'id'],
+      })
+      return
+    }
+
+    tierIds.add(tier.id)
+  })
 })
 
 export const bulkEditPayloadSchema = z.object({
@@ -185,7 +228,7 @@ export function createBulkEditPayload({
   rewards,
 }: {
   habits: Habit[]
-  rewards: WishlistItemType[]
+  rewards: RewardDefinition[]
 }): BulkEditPayload {
   return {
     schemaVersion: BULK_EDIT_SCHEMA_VERSION,
@@ -200,11 +243,19 @@ export function createBulkEditPayload({
       id: reward.id,
       name: reward.name,
       description: reward.description,
-      coinCost: reward.coinCost,
       archived: reward.archived ?? false,
-      targetCompletions: reward.targetCompletions,
       link: reward.link,
       drawing: reward.drawing,
+      redemptionRule: {
+        window: reward.redemptionRule.window,
+        maxRedemptions: reward.redemptionRule.maxRedemptions,
+      },
+      tiers: reward.tiers.map((tier, index) => ({
+        id: tier.id,
+        name: tier.name,
+        coinCost: tier.coinCost,
+        position: tier.position ?? index,
+      })),
     })),
   }
 }
