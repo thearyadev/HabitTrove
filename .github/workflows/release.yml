@@ -58,8 +58,10 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            thearyadev/habittrove:${{ inputs.version }}
             thearyadev/habittrove:latest
+            thearyadev/habittrove:${{ inputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
@@ -67,3 +69,5 @@ jobs:
           tag_name: v${{ inputs.version }}
           name: v${{ inputs.version }}
           generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
