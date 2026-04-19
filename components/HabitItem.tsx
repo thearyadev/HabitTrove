@@ -128,13 +128,15 @@ export default function HabitItem({ habit, onEdit, onDelete }: HabitItemProps) {
               <Button
                 variant={isCompletedToday ? "secondary" : "default"}
                 size="sm"
-                onClick={async () => {
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
                   if (quantityHabit) {
                     setIsLogModalOpen(true)
                     return
                   }
 
-                  await completeHabit(habit)
+                  completeHabit(habit)
                 }}
                 disabled={!canInteract || habit.archived || (isCompletedToday && completionsToday >= target)}
                 className={`overflow-hidden w-24 sm:w-auto ${habit.archived ? 'cursor-not-allowed' : ''}`}
