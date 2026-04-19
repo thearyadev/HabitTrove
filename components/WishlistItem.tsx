@@ -15,7 +15,7 @@ import { RewardDefinition, RewardTier } from '@/lib/types'
 import { RewardUsageSummary, sortRewardTiers } from '@/lib/rewards'
 import { settingsAtom } from '@/lib/atoms'
 import { translateWithFallback } from '@/lib/i18n'
-import { d2s, t2d } from '@/lib/utils'
+import { d2s, formatDecimal, t2d } from '@/lib/utils'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -191,7 +191,7 @@ export default function WishlistItem({
                 </div>
                 <div className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
                   <Coins className="h-3.5 w-3.5 text-yellow-500" />
-                  <span>{tier.coinCost} {t('coinsSuffix')}</span>
+                  <span>{formatDecimal(tier.coinCost)} {t('coinsSuffix')}</span>
                 </div>
               </div>
 
@@ -217,7 +217,7 @@ export default function WishlistItem({
 
       <CardFooter className="justify-between text-xs text-muted-foreground">
         <span>{tx('tiersCount', '{count} tiers', { count: reward.tiers.length })}</span>
-        <span>{tx('fromCoins', 'From {coins} coins', { coins: sortedTiers[0]?.coinCost ?? 0 })}</span>
+        <span>{tx('fromCoins', 'From {coins} coins', { coins: formatDecimal(sortedTiers[0]?.coinCost ?? 0) })}</span>
       </CardFooter>
     </Card>
   )

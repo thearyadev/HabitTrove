@@ -56,17 +56,57 @@ export type RewardDefinition = {
   tiers: RewardTier[]
 }
 
-export type TransactionType = 'HABIT_COMPLETION' | 'HABIT_UNDO' | 'WISH_REDEMPTION' | 'MANUAL_ADJUSTMENT' | 'TASK_COMPLETION' | 'TASK_UNDO';
+export type AccountKind = 'PRIMARY' | 'INVESTMENT_TERM'
+
+export type AccountStatus = 'ACTIVE' | 'MATURED' | 'BROKEN' | 'CLOSED'
+
+export type TransactionType =
+  | 'HABIT_COMPLETION'
+  | 'TASK_COMPLETION'
+  | 'WISH_REDEMPTION'
+  | 'MANUAL_ADJUSTMENT'
+  | 'PRIMARY_TAX'
+  | 'PRIMARY_TO_INVESTMENT'
+  | 'INVESTMENT_PRINCIPAL'
+  | 'INVESTMENT_INTEREST'
+  | 'INVESTMENT_BREAK_FORFEIT'
+  | 'INVESTMENT_BREAK_TAX_PENALTY'
+  | 'INVESTMENT_BREAK_RETURN'
+  | 'INVESTMENT_BREAK_RECEIPT'
+  | 'INVESTMENT_WITHDRAWAL'
+  | 'INVESTMENT_WITHDRAWAL_RECEIPT'
+  | 'LEGACY_UNDO'
+
+export interface FinanceAccount {
+  id: string
+  name: string
+  kind: AccountKind
+  status: AccountStatus
+  createdAt: string
+  updatedAt: string
+  currentBalance: number
+  termWeeks?: number
+  weeklyInterestRateBps?: number
+  principalAmount?: number
+  startedAt?: string
+  maturesAt?: string
+  closedAt?: string
+  taxStartAt?: string
+  availableForWithdrawal?: boolean
+}
 
 export interface CoinTransaction {
-  id: string;
-  amount: number;
-  type: TransactionType;
-  description: string;
-  timestamp: string;
-  relatedItemId?: string;
-  relatedSubItemId?: string;
-  note?: string;
+  id: string
+  accountId: string
+  accountKind: AccountKind
+  accountName: string
+  amount: number
+  type: TransactionType
+  description: string
+  timestamp: string
+  effectiveAt: string
+  relatedItemId?: string
+  relatedSubItemId?: string
 }
 
 export interface HabitsData {
@@ -75,8 +115,11 @@ export interface HabitsData {
 
 
 export interface CoinsData {
-  balance: number;
-  transactions: CoinTransaction[];
+  primaryAccountId: string | null
+  primaryBalance: number
+  shelteredBalance: number
+  accounts: FinanceAccount[]
+  transactions: CoinTransaction[]
 }
 
 // Default value functions
@@ -91,9 +134,12 @@ export const getDefaultHabitsData = (): HabitsData => ({
 
 
 export const getDefaultCoinsData = (): CoinsData => ({
-  balance: 0,
+  primaryAccountId: null,
+  primaryBalance: 0,
+  shelteredBalance: 0,
+  accounts: [],
   transactions: []
-});
+})
 
 export const getDefaultWishlistData = (): WishlistData => ({
   rewards: []

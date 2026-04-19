@@ -1,14 +1,14 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Coins } from 'lucide-react'
+import { Coins, PiggyBank } from 'lucide-react'
 import { FormattedNumber } from '@/components/FormattedNumber'
 import { useAtom } from 'jotai'
 import { useTranslations } from 'next-intl'
 import { settingsAtom } from '@/lib/atoms'
 import TodayEarnedCoins from './TodayEarnedCoins'
 
-export default function CoinBalance({ coinBalance }: { coinBalance: number }) {
+export default function CoinBalance({ coinBalance, shelteredBalance = 0 }: { coinBalance: number; shelteredBalance?: number }) {
   const t = useTranslations('CoinBalance');
   const [settings] = useAtom(settingsAtom)
   return (
@@ -28,6 +28,13 @@ export default function CoinBalance({ coinBalance }: { coinBalance: number }) {
           </div>
           <div className="text-sm text-muted-foreground">
             <TodayEarnedCoins longFormat={true} />
+          </div>
+          <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-background/60 px-3 py-2 text-sm text-muted-foreground">
+            <PiggyBank className="h-4 w-4 text-emerald-400" />
+            Sheltered:
+            <span className="font-medium text-foreground">
+              <FormattedNumber amount={shelteredBalance} settings={settings} />
+            </span>
           </div>
         </div>
       </CardContent>

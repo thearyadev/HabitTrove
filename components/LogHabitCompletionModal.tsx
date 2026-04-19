@@ -115,7 +115,7 @@ export default function LogHabitCompletionModal({
               {t('estimatedRewardLabel')}
             </div>
             <div className="mt-1 text-2xl font-semibold">
-              {t('estimatedRewardValue', { coins: estimatedCoins })}
+              {t('estimatedRewardValue', { coins: formatDecimal(estimatedCoins) })}
             </div>
           </div>
           <DialogFooter>

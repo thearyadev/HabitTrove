@@ -1,7 +1,7 @@
 import { useAtom } from 'jotai'
 import { useTranslations } from 'next-intl'
-import { habitsAtom, coinsAtom, settingsAtom, habitFreqMapAtom } from '@/lib/atoms'
-import { addCoins, removeCoins, saveHabitsData } from '@/app/actions/data'
+import { habitsAtom, settingsAtom, habitFreqMapAtom } from '@/lib/atoms'
+import { addCoins, saveHabitsData } from '@/app/actions/data'
 import { Habit, HabitCompletion } from '@/lib/types'
 import { toast } from '@/hooks/use-toast'
 import { DateTime } from 'luxon'
@@ -10,7 +10,6 @@ import {
   d2s,
   d2t,
   getCompletionCountForDate,
-  getCompletionRecordsForDate,
   getISODate,
   getNow,
   getNowInMilliseconds,
@@ -18,10 +17,7 @@ import {
   isQuantityHabit,
   normalizeHabitCompletion,
   playSound,
-  t2d,
 } from '@/lib/utils'
-import { ToastAction } from '@/components/ui/toast'
-import { Undo2 } from 'lucide-react'
 
 type CompleteHabitOptions = {
   quantity?: number
@@ -57,9 +53,7 @@ function sanitizeHabit(habit: Habit): Habit {
 
 export function useHabits() {
   const t = useTranslations('useHabits')
-  const tCommon = useTranslations('Common')
   const [habitsData, setHabitsData] = useAtom(habitsAtom)
-  const [coins, setCoins] = useAtom(coinsAtom)
   const [settings] = useAtom(settingsAtom)
   const [habitFreqMap] = useAtom(habitFreqMapAtom)
 
@@ -120,7 +114,7 @@ export function useHabits() {
         archived: habit.isTask && completionsToday + 1 === target ? true : habit.archived,
       }
 
-      const { sanitizedHabit, updatedHabits } = await persistHabitUpdate(updatedHabit)
+      const { updatedHabits } = await persistHabitUpdate(updatedHabit)
       const updatedCoins = await addCoins({
         amount: coinsAwarded,
         description: `Completed: ${habit.name} (${formatQuantityValue(quantity)} ${habit.quantityUnit})`,
@@ -139,16 +133,12 @@ export function useHabits() {
           unit: habit.quantityUnit ?? '',
           coinReward: coinsAwarded,
         }),
-        action: <ToastAction altText={tCommon('undoButton')} className="gap-2" onClick={() => undoComplete(sanitizedHabit)}>
-          <Undo2 className="h-4 w-4" />{tCommon('undoButton')}
-        </ToastAction>
       })
-      setCoins(updatedCoins)
 
       return {
         updatedHabits,
-        newBalance: coins.balance,
-        newTransactions: coins.transactions,
+        newBalance: updatedCoins.primaryBalance,
+        newTransactions: updatedCoins.transactions,
       }
     }
 
@@ -164,7 +154,7 @@ export function useHabits() {
       archived: habit.isTask && completionsToday + 1 === target ? true : habit.archived,
     }
 
-    const { sanitizedHabit, updatedHabits } = await persistHabitUpdate(updatedHabit)
+    const { updatedHabits } = await persistHabitUpdate(updatedHabit)
     const isTargetReached = completionsToday + 1 === target
 
     if (isTargetReached) {
@@ -178,129 +168,24 @@ export function useHabits() {
       toast({
         title: t('completedTitle'),
         description: t('earnedCoinsDescription', { coinReward: habit.coinReward }),
-        action: <ToastAction altText={tCommon('undoButton')} className="gap-2" onClick={() => undoComplete(sanitizedHabit)}>
-          <Undo2 className="h-4 w-4" />{tCommon('undoButton')}
-        </ToastAction>
       })
-      setCoins(updatedCoins)
+ 
+      return {
+        updatedHabits,
+        newBalance: updatedCoins.primaryBalance,
+        newTransactions: updatedCoins.transactions,
+      }
     } else {
       toast({
         title: t('progressTitle'),
         description: t('progressDescription', { count: completionsToday + 1, target }),
-        action: <ToastAction altText={tCommon('undoButton')} className="gap-2" onClick={() => undoComplete(sanitizedHabit)}>
-          <Undo2 className="h-4 w-4" />{tCommon('undoButton')}
-        </ToastAction>
-      })
-    }
-
-    return {
-      updatedHabits,
-      newBalance: coins.balance,
-      newTransactions: coins.transactions,
-    }
-  }
-
-  const undoComplete = async (habit: Habit) => {
-    const timezone = settings.system.timezone
-    const today = t2d({ timestamp: getTodayInTimezone(timezone), timezone })
-    const todayCompletions = getCompletionRecordsForDate({
-      habit,
-      date: today,
-      timezone,
-    })
-
-    if (todayCompletions.length === 0) {
-      toast({
-        title: t('noCompletionsToUndoTitle'),
-        description: t('noCompletionsToUndoDescription'),
-        variant: 'destructive',
-      })
-      return
-    }
-
-    const completionToRemove = todayCompletions[todayCompletions.length - 1]
-    const updatedHabit: Habit = {
-      ...habit,
-      completions: normalizeCompletions(habit.completions).filter(
-        (completion) => completion.id !== completionToRemove.id
-      ),
-      archived: habit.isTask ? false : habit.archived,
-    }
-
-    const { sanitizedHabit, updatedHabits } = await persistHabitUpdate(updatedHabit)
-    let updatedCoins = coins
-
-    if (isQuantityHabit(habit)) {
-      if (completionToRemove.coinsAwarded) {
-        updatedCoins = await removeCoins({
-          amount: completionToRemove.coinsAwarded,
-          description: `Undid completion: ${habit.name} (${formatQuantityValue(completionToRemove.quantity ?? 0)} ${habit.quantityUnit})`,
-          type: habit.isTask ? 'TASK_UNDO' : 'HABIT_UNDO',
-          relatedItemId: habit.id,
-        })
-        setCoins(updatedCoins)
-      }
-
-      toast({
-        title: t('completionUndoneTitle'),
-        description: t('quantityCompletionUndoneDescription', {
-          count: getCompletionCountForDate({
-            habit: sanitizedHabit,
-            date: today,
-            timezone,
-          }),
-          target: habit.targetCompletions || 1,
-        }),
-        action: completionToRemove.quantity ? (
-          <ToastAction
-            altText={tCommon('redoButton')}
-            onClick={() => completeHabit(sanitizedHabit, {
-              quantity: completionToRemove.quantity,
-              completedAt: completionToRemove.completedAt,
-            })}
-          >
-            <Undo2 className="h-4 w-4" />{tCommon('redoButton')}
-          </ToastAction>
-        ) : undefined,
       })
 
       return {
         updatedHabits,
-        newBalance: updatedCoins.balance,
-        newTransactions: updatedCoins.transactions,
+        newBalance: 0,
+        newTransactions: [],
       }
-    }
-
-    const target = habit.targetCompletions || 1
-    if (todayCompletions.length === target) {
-      updatedCoins = await removeCoins({
-        amount: habit.coinReward,
-        description: `Undid completion: ${habit.name}`,
-        type: habit.isTask ? 'TASK_UNDO' : 'HABIT_UNDO',
-        relatedItemId: habit.id,
-      })
-      setCoins(updatedCoins)
-    }
-
-    toast({
-      title: t('completionUndoneTitle'),
-      description: t('completionUndoneDescription', {
-        count: getCompletionCountForDate({
-          habit: sanitizedHabit,
-          date: today,
-          timezone,
-        }),
-        target,
-      }),
-      action: <ToastAction altText={tCommon('redoButton')} onClick={() => completeHabit(sanitizedHabit)}>
-        <Undo2 className="h-4 w-4" />{tCommon('redoButton')}
-      </ToastAction>
-    })
-
-    return {
-      updatedHabits,
-      newBalance: updatedCoins.balance,
-      newTransactions: updatedCoins.transactions,
     }
   }
 
@@ -383,7 +268,17 @@ export function useHabits() {
         type: habit.isTask ? 'TASK_COMPLETION' : 'HABIT_COMPLETION',
         relatedItemId: habit.id,
       })
-      setCoins(updatedCoins)
+
+      toast({
+        title: t('completedTitle'),
+        description: t('earnedCoinsPastDateDescription', { coinReward: habit.coinReward, dateKey }),
+      })
+
+      return {
+        updatedHabits,
+        newBalance: updatedCoins.primaryBalance,
+        newTransactions: updatedCoins.transactions,
+      }
     }
 
     toast({
@@ -395,8 +290,8 @@ export function useHabits() {
 
     return {
       updatedHabits,
-      newBalance: coins.balance,
-      newTransactions: coins.transactions,
+      newBalance: 0,
+      newTransactions: [],
     }
   }
 
@@ -418,7 +313,6 @@ export function useHabits() {
 
   return {
     completeHabit,
-    undoComplete,
     saveHabit,
     deleteHabit,
     completePastHabit,

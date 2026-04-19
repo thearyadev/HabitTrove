@@ -1,41 +1,45 @@
-import { useAtom } from 'jotai';
-import { useTranslations } from 'next-intl';
+import { useAtom } from 'jotai'
+import { useTranslations } from 'next-intl'
 import {
   coinsAtom,
   coinsEarnedTodayAtom,
+  coinsSpentTodayAtom,
+  shelteredBalanceAtom,
   totalEarnedAtom,
   totalSpentAtom,
-  coinsSpentTodayAtom,
   transactionsTodayAtom,
 } from '@/lib/atoms'
-import { addCoins, removeCoins, updateTransactionNote } from '@/app/actions/data'
+import {
+  addCoins,
+  breakInvestment,
+  openInvestmentAccount,
+  removeCoins,
+  withdrawInvestment,
+} from '@/app/actions/data'
+import { translateWithFallback } from '@/lib/i18n'
 import { toast } from '@/hooks/use-toast'
 import { MAX_COIN_LIMIT } from '@/lib/constants'
 
 export function useCoins() {
-  const t = useTranslations('useCoins');
+  const t = useTranslations('useCoins')
+  const tx = (key: string, fallback: string, values?: Record<string, string | number>) =>
+    translateWithFallback(t, key, fallback, values)
   const [coins, setCoins] = useAtom(coinsAtom)
-  const [atomCoinsEarnedToday] = useAtom(coinsEarnedTodayAtom);
-  const [atomTotalEarned] = useAtom(totalEarnedAtom)
-  const [atomTotalSpent] = useAtom(totalSpentAtom)
-  const [atomCoinsSpentToday] = useAtom(coinsSpentTodayAtom);
-  const [atomTransactionsToday] = useAtom(transactionsTodayAtom);
-  const transactions = coins.transactions
-  const balance = transactions.reduce((sum, transaction) => sum + transaction.amount, 0)
+  const [coinsEarnedToday] = useAtom(coinsEarnedTodayAtom)
+  const [totalEarned] = useAtom(totalEarnedAtom)
+  const [totalSpent] = useAtom(totalSpentAtom)
+  const [coinsSpentToday] = useAtom(coinsSpentTodayAtom)
+  const [transactionsToday] = useAtom(transactionsTodayAtom)
+  const [shelteredBalance] = useAtom(shelteredBalanceAtom)
 
   const add = async (amount: number, description: string, note?: string) => {
-    if (isNaN(amount) || amount <= 0) {
-      toast({
-        title: t("invalidAmountTitle"),
-        description: t("invalidAmountDescription")
-      })
+    if (Number.isNaN(amount) || amount <= 0) {
+      toast({ title: t('invalidAmountTitle'), description: t('invalidAmountDescription') })
       return null
     }
+
     if (amount > MAX_COIN_LIMIT) {
-      toast({
-        title: t("invalidAmountTitle"),
-        description: t("maxAmountExceededDescription", { max: MAX_COIN_LIMIT })
-      })
+      toast({ title: t('invalidAmountTitle'), description: t('maxAmountExceededDescription', { max: MAX_COIN_LIMIT }) })
       return null
     }
 
@@ -46,63 +50,106 @@ export function useCoins() {
       note,
     })
     setCoins(data)
-    toast({ title: t("successTitle"), description: t("addedCoinsDescription", { amount }) })
+    toast({ title: t('successTitle'), description: t('addedCoinsDescription', { amount }) })
     return data
   }
 
   const remove = async (amount: number, description: string, note?: string) => {
-    const numAmount = Math.abs(amount)
-    if (isNaN(numAmount) || numAmount <= 0) {
-      toast({
-        title: t("invalidAmountTitle"),
-        description: t("invalidAmountDescription")
-      })
+    const value = Math.abs(amount)
+    if (Number.isNaN(value) || value <= 0) {
+      toast({ title: t('invalidAmountTitle'), description: t('invalidAmountDescription') })
       return null
     }
-    if (numAmount > MAX_COIN_LIMIT) {
-      toast({
-        title: t("invalidAmountTitle"),
-        description: t("maxAmountExceededDescription", { max: MAX_COIN_LIMIT })
-      })
+
+    if (value > MAX_COIN_LIMIT) {
+      toast({ title: t('invalidAmountTitle'), description: t('maxAmountExceededDescription', { max: MAX_COIN_LIMIT }) })
       return null
     }
 
     const data = await removeCoins({
-      amount: numAmount,
+      amount: value,
       description,
       type: 'MANUAL_ADJUSTMENT',
       note,
     })
     setCoins(data)
-    toast({ title: t("successTitle"), description: t("removedCoinsDescription", { amount: numAmount }) })
+    toast({ title: t('successTitle'), description: t('removedCoinsDescription', { amount: value }) })
     return data
   }
 
-  const updateNote = async (transactionId: string, note: string) => {
-    const transaction = coins.transactions.find(t => t.id === transactionId)
-    if (!transaction) {
+  const createInvestment = async (amount: number, termWeeks: number) => {
+    try {
+      const data = await openInvestmentAccount({ amount, termWeeks })
+      setCoins(data)
       toast({
-        title: t("invalidAmountTitle"),
-        description: t("transactionNotFoundDescription")
+        title: tx('investmentOpenedTitle', 'Investment opened'),
+        description: tx('investmentOpenedDescription', 'Moved {amount} coins into {termWeeks}-week shelter.', { amount, termWeeks }),
+      })
+      return data
+    } catch (error) {
+      toast({
+        title: tx('investmentErrorTitle', 'Investment error'),
+        description: error instanceof Error ? error.message : tx('investmentErrorDescription', 'Unable to update investment account.'),
+        variant: 'destructive',
       })
       return null
     }
+  }
 
-    const newData = await updateTransactionNote(transactionId, note)
-    setCoins(newData)
-    return newData
+  const breakInvestmentAccountById = async (accountId: string) => {
+    try {
+      const data = await breakInvestment(accountId)
+      setCoins(data)
+      toast({
+        title: tx('investmentBrokenTitle', 'Investment broken'),
+        description: tx('investmentBrokenDescription', 'Returned principal to primary account. Interest forfeited.'),
+      })
+      return data
+    } catch (error) {
+      toast({
+        title: tx('investmentErrorTitle', 'Investment error'),
+        description: error instanceof Error ? error.message : tx('investmentErrorDescription', 'Unable to update investment account.'),
+        variant: 'destructive',
+      })
+      return null
+    }
+  }
+
+  const withdrawInvestmentAccountById = async (accountId: string) => {
+    try {
+      const data = await withdrawInvestment(accountId)
+      setCoins(data)
+      toast({
+        title: tx('investmentWithdrawnTitle', 'Investment withdrawn'),
+        description: tx('investmentWithdrawnDescription', 'Moved matured balance back to primary account.'),
+      })
+      return data
+    } catch (error) {
+      toast({
+        title: tx('investmentErrorTitle', 'Investment error'),
+        description: error instanceof Error ? error.message : tx('investmentErrorDescription', 'Unable to update investment account.'),
+        variant: 'destructive',
+      })
+      return null
+    }
   }
 
   return {
     add,
     remove,
-    updateNote,
-    balance,
-    transactions: transactions,
-    coinsEarnedToday: atomCoinsEarnedToday,
-    totalEarned: atomTotalEarned,
-    totalSpent: atomTotalSpent,
-    coinsSpentToday: atomCoinsSpentToday,
-    transactionsToday: atomTransactionsToday
+    createInvestment,
+    breakInvestment: breakInvestmentAccountById,
+    withdrawInvestment: withdrawInvestmentAccountById,
+    balance: coins.primaryBalance,
+    shelteredBalance,
+    accounts: coins.accounts,
+    primaryAccount: coins.accounts.find((account) => account.id === coins.primaryAccountId) ?? null,
+    investmentAccounts: coins.accounts.filter((account) => account.kind === 'INVESTMENT_TERM'),
+    transactions: coins.transactions,
+    coinsEarnedToday,
+    totalEarned,
+    totalSpent,
+    coinsSpentToday,
+    transactionsToday,
   }
 }

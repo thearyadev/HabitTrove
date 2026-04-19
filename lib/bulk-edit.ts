@@ -23,7 +23,7 @@ const bulkEditHabitSchema = z.object({
   name: z.string().trim().min(1, 'Name is required.'),
   description: z.string().default(''),
   frequency: z.string().trim().min(1, 'Frequency is required.'),
-  coinReward: z.number().int().min(1).max(MAX_COIN_LIMIT),
+  coinReward: z.number().min(0.01).max(MAX_COIN_LIMIT),
   trackingMode: z.enum(['standard', 'quantity']).default('standard'),
   quantityUnit: optionalTrimmedString,
   baseRate: z.number().positive().optional(),
@@ -82,7 +82,7 @@ const bulkEditHabitSchema = z.object({
 const bulkEditRewardTierSchema = z.object({
   id: optionalTrimmedString,
   name: z.string().trim().min(1, 'Tier name is required.'),
-  coinCost: z.number().int().min(1).max(MAX_COIN_LIMIT),
+  coinCost: z.number().min(0.01).max(MAX_COIN_LIMIT),
   position: z.number().int().min(0).optional(),
 })
 

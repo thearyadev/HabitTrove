@@ -1,6 +1,6 @@
-export const SCHEMA_VERSION = 5
+export const SCHEMA_VERSION = 7
 
-export const SCHEMA_SQL = `
+export const BASE_SCHEMA_SQL = `
   CREATE TABLE IF NOT EXISTS app_settings (
     singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
     use_number_formatting INTEGER NOT NULL DEFAULT 1,
@@ -16,7 +16,7 @@ export const SCHEMA_SQL = `
     name TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
     frequency TEXT NOT NULL,
-    coin_reward INTEGER NOT NULL,
+    coin_reward REAL NOT NULL,
     tracking_mode TEXT NOT NULL DEFAULT 'standard',
     quantity_unit TEXT,
     base_rate REAL,
@@ -36,7 +36,7 @@ export const SCHEMA_SQL = `
     habit_id TEXT NOT NULL,
     completed_at TEXT NOT NULL,
     quantity REAL,
-    coins_awarded INTEGER,
+    coins_awarded REAL,
     FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE CASCADE
   );
 
@@ -56,22 +56,54 @@ export const SCHEMA_SQL = `
     id TEXT PRIMARY KEY,
     reward_id TEXT NOT NULL,
     name TEXT NOT NULL,
-    coin_cost INTEGER NOT NULL,
+    coin_cost REAL NOT NULL,
     position INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL,
     deleted_at TEXT,
     FOREIGN KEY (reward_id) REFERENCES rewards(id) ON DELETE CASCADE
   );
 
-  CREATE TABLE IF NOT EXISTS coin_transactions (
+  CREATE TABLE IF NOT EXISTS accounts (
     id TEXT PRIMARY KEY,
-    amount INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    status TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    term_weeks INTEGER,
+    weekly_interest_rate_bps INTEGER,
+    principal_amount REAL,
+    started_at TEXT,
+    matures_at TEXT,
+    closed_at TEXT,
+    tax_start_at TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS ledger_entries (
+    id TEXT PRIMARY KEY,
+    account_id TEXT NOT NULL,
+    amount REAL NOT NULL,
     type TEXT NOT NULL,
     description TEXT NOT NULL,
-    timestamp TEXT NOT NULL,
+    posted_at TEXT NOT NULL,
+    effective_at TEXT NOT NULL,
     related_item_id TEXT,
     related_sub_item_id TEXT,
-    note TEXT
+    metadata_json TEXT,
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE RESTRICT
+  );
+
+  CREATE TABLE IF NOT EXISTS scheduled_events (
+    id TEXT PRIMARY KEY,
+    event_type TEXT NOT NULL,
+    account_id TEXT NOT NULL,
+    scheduled_for TEXT NOT NULL,
+    status TEXT NOT NULL,
+    processed_at TEXT,
+    dedupe_key TEXT NOT NULL UNIQUE,
+    payload_json TEXT,
+    error TEXT,
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
   );
 
   CREATE INDEX IF NOT EXISTS idx_habit_completions_habit_id
@@ -84,6 +116,12 @@ export const SCHEMA_SQL = `
     ON reward_tiers(reward_id);
   CREATE INDEX IF NOT EXISTS idx_reward_tiers_deleted_at
     ON reward_tiers(deleted_at);
-  CREATE INDEX IF NOT EXISTS idx_coin_transactions_timestamp
-    ON coin_transactions(timestamp DESC);
+  CREATE INDEX IF NOT EXISTS idx_accounts_kind_status
+    ON accounts(kind, status);
+  CREATE INDEX IF NOT EXISTS idx_ledger_entries_account_effective_at
+    ON ledger_entries(account_id, effective_at DESC, id DESC);
+  CREATE INDEX IF NOT EXISTS idx_ledger_entries_effective_at
+    ON ledger_entries(effective_at DESC, id DESC);
+  CREATE INDEX IF NOT EXISTS idx_scheduled_events_status_date
+    ON scheduled_events(status, scheduled_for ASC);
 `

@@ -20,7 +20,7 @@ import {
   getCompletionsForToday,
   isHabitDue,
   getHabitFreq,
-  roundToInteger,
+  roundToCurrency,
   normalizeHabitCompletion,
 } from "@/lib/utils";
 import { atomFamily, atomWithStorage } from "jotai/utils";
@@ -49,48 +49,61 @@ export const coinsAtom = atom(getDefaultCoinsData());
 export const wishlistAtom = atom(getDefaultWishlistData());
 export const serverSettingsAtom = atom(getDefaultServerSettings());
 
+const primaryTransactionsAtom = atom((get) => {
+  const coins = get(coinsAtom)
+  if (!coins.primaryAccountId) {
+    return []
+  }
+
+  return coins.transactions.filter((transaction) => transaction.accountId === coins.primaryAccountId)
+})
+
 // Derived atom for coins earned today
 export const coinsEarnedTodayAtom = atom((get) => {
-  const coins = get(coinsAtom);
-  const settings = get(settingsAtom);
-  const value = calculateCoinsEarnedToday(coins.transactions, settings.system.timezone);
-  return roundToInteger(value);
+  const transactions = get(primaryTransactionsAtom)
+  const settings = get(settingsAtom)
+  const value = calculateCoinsEarnedToday(transactions, settings.system.timezone)
+  return roundToCurrency(value)
 });
 
 // Derived atom for total earned
 export const totalEarnedAtom = atom((get) => {
-  const coins = get(coinsAtom);
-  const value = calculateTotalEarned(coins.transactions);
-  return roundToInteger(value);
+  const transactions = get(primaryTransactionsAtom)
+  const value = calculateTotalEarned(transactions)
+  return roundToCurrency(value)
 });
 
 // Derived atom for total spent
 export const totalSpentAtom = atom((get) => {
-  const coins = get(coinsAtom);
-  const value = calculateTotalSpent(coins.transactions);
-  return roundToInteger(value);
+  const transactions = get(primaryTransactionsAtom)
+  const value = calculateTotalSpent(transactions)
+  return roundToCurrency(value)
 });
 
 // Derived atom for coins spent today
 export const coinsSpentTodayAtom = atom((get) => {
-  const coins = get(coinsAtom);
-  const settings = get(settingsAtom);
-  const value = calculateCoinsSpentToday(coins.transactions, settings.system.timezone);
-  return roundToInteger(value);
+  const transactions = get(primaryTransactionsAtom)
+  const settings = get(settingsAtom)
+  const value = calculateCoinsSpentToday(transactions, settings.system.timezone)
+  return roundToCurrency(value)
 });
 
 // Derived atom for transactions today
 export const transactionsTodayAtom = atom((get) => {
-  const coins = get(coinsAtom);
-  const settings = get(settingsAtom);
-  return calculateTransactionsToday(coins.transactions, settings.system.timezone);
+  const transactions = get(primaryTransactionsAtom)
+  const settings = get(settingsAtom)
+  return calculateTransactionsToday(transactions, settings.system.timezone)
 });
 
 export const coinsBalanceAtom = atom((get) => {
-  const coins = get(coinsAtom);
-  const balance = coins.transactions.reduce((sum, transaction) => sum + transaction.amount, 0);
-  return roundToInteger(balance);
-});
+  const coins = get(coinsAtom)
+  return roundToCurrency(coins.primaryBalance)
+})
+
+export const shelteredBalanceAtom = atom((get) => {
+  const coins = get(coinsAtom)
+  return roundToCurrency(coins.shelteredBalance)
+})
 
 /* transient atoms */
 interface PomodoroAtom {
