@@ -152,7 +152,7 @@ export default function AddEditWishlistItemModal({
         newErrors[`tier-name-${tier.localId}`] = tx('errorTierNameRequired', 'Tier {index} needs a name.', { index: index + 1 })
       }
 
-      if (!Number.isInteger(tier.coinCost) || tier.coinCost < 1) {
+      if (tier.coinCost < 0.01) {
         newErrors[`tier-cost-${tier.localId}`] = t('errorCoinCostMin')
       }
 
@@ -390,7 +390,7 @@ export default function AddEditWishlistItemModal({
                               type="number"
                               min={1}
                               max={MAX_COIN_LIMIT}
-                              step={1}
+                              step="any"
                               value={tier.coinCost}
                               onChange={(event) => {
                                 const parsed = Number(event.target.value || '0')

@@ -5,7 +5,6 @@ import path from 'path'
 import { randomUUID } from 'crypto'
 import {
   CoinsData,
-  CoinTransaction,
   HabitsData,
   RewardDefinition,
   ServerSettings,
@@ -13,6 +12,7 @@ import {
   TransactionType,
   WishlistData,
 } from '@/lib/types'
+import { clampInvestmentTermWeeks, calculateBreakTaxPenalty } from '@/lib/finance'
 import {
   BulkEditPayload,
   createBulkEditPayload,
@@ -22,7 +22,14 @@ import {
 import { d2t, getNow } from '@/lib/utils'
 import { ALLOWED_AVATAR_EXTENSIONS, ALLOWED_AVATAR_MIME_TYPES } from '@/lib/avatar'
 import { withTransaction } from '@/lib/db/client'
-import { getCoins, insertCoinTransaction, saveCoinSnapshot, updateTransactionNoteRecord } from '@/lib/db/repos/coins'
+import {
+  breakInvestmentAccount,
+  createInvestmentAccount,
+  getCoins,
+  postPrimaryTransaction,
+  runDueFinancialEvents,
+  withdrawInvestmentAccount,
+} from '@/lib/db/repos/coins'
 import { getHabits, saveHabits, syncHabitDefinitions } from '@/lib/db/repos/habits'
 import { getSettings, saveSettingsRecord } from '@/lib/db/repos/settings'
 import { getWishlist, saveWishlist, syncWishlistDefinitions } from '@/lib/db/repos/wishlist'
@@ -144,10 +151,6 @@ export async function loadCoinsData(): Promise<CoinsData> {
   return getCoins()
 }
 
-export async function saveCoinsData(data: CoinsData): Promise<void> {
-  saveCoinSnapshot(data)
-}
-
 export async function addCoins({
   amount,
   description,
@@ -163,18 +166,14 @@ export async function addCoins({
   relatedSubItemId?: string
   note?: string
 }): Promise<CoinsData> {
-  insertCoinTransaction({
-    id: randomUUID(),
+  return postPrimaryTransaction({
     amount,
     type,
-    description,
-    timestamp: d2t({ dateTime: getNow({}) }),
+    description: note?.trim() ? `${description} (${note.trim()})` : description,
     relatedItemId,
     relatedSubItemId,
-    note: note?.trim() ? note : undefined,
-  } satisfies CoinTransaction)
-
-  return getCoins()
+    effectiveAt: d2t({ dateTime: getNow({}) }),
+  })
 }
 
 export async function loadSettings(): Promise<Settings> {
@@ -200,23 +199,14 @@ export async function removeCoins({
   relatedSubItemId?: string
   note?: string
 }): Promise<CoinsData> {
-  insertCoinTransaction({
-    id: randomUUID(),
+  return postPrimaryTransaction({
     amount: -Math.abs(amount),
     type,
-    description,
-    timestamp: d2t({ dateTime: getNow({}) }),
+    description: note?.trim() ? `${description} (${note.trim()})` : description,
     relatedItemId,
     relatedSubItemId,
-    note: note?.trim() ? note : undefined,
-  } satisfies CoinTransaction)
-
-  return getCoins()
-}
-
-export async function updateTransactionNote(transactionId: string, note: string): Promise<CoinsData> {
-  updateTransactionNoteRecord(transactionId, note.trim() || undefined)
-  return getCoins()
+    effectiveAt: d2t({ dateTime: getNow({}) }),
+  })
 }
 
 export async function redeemRewardTier({
@@ -238,6 +228,7 @@ export async function redeemRewardTier({
     }
 > {
   const settings = getSettings()
+  runDueFinancialEvents()
 
   const result = withTransaction((db) => {
     const reward = db.prepare(`
@@ -275,8 +266,10 @@ export async function redeemRewardTier({
     }
 
     const balanceRow = db.prepare(`
-      SELECT COALESCE(SUM(amount), 0) AS balance
-      FROM coin_transactions
+      SELECT COALESCE(SUM(ledger_entries.amount), 0) AS balance
+      FROM ledger_entries
+      INNER JOIN accounts ON accounts.id = ledger_entries.account_id
+      WHERE accounts.kind = 'PRIMARY'
     `).get() as { balance: number }
 
     if (balanceRow.balance < tier.coin_cost) {
@@ -299,11 +292,13 @@ export async function redeemRewardTier({
 
       const countRow = db.prepare(`
         SELECT COUNT(*) AS count
-        FROM coin_transactions
-        WHERE type = 'WISH_REDEMPTION'
-          AND related_item_id = ?
-          AND timestamp >= ?
-          AND timestamp < ?
+        FROM ledger_entries
+        INNER JOIN accounts ON accounts.id = ledger_entries.account_id
+        WHERE accounts.kind = 'PRIMARY'
+          AND ledger_entries.type = 'WISH_REDEMPTION'
+          AND ledger_entries.related_item_id = ?
+          AND ledger_entries.effective_at >= ?
+          AND ledger_entries.effective_at < ?
       `).get(reward.id, bounds.startsAt, bounds.endsAt) as { count: number }
 
       const maxRedemptions = reward.max_redemptions ?? 1
@@ -312,15 +307,41 @@ export async function redeemRewardTier({
       }
     }
 
-    insertCoinTransaction({
-      id: randomUUID(),
-      amount: -Math.abs(tier.coin_cost),
-      type: 'WISH_REDEMPTION',
-      description: `Redeemed reward: ${reward.name} - ${tier.name}`,
-      timestamp: d2t({ dateTime: getNow({}) }),
-      relatedItemId: reward.id,
-      relatedSubItemId: tier.id,
-    })
+    const primaryAccount = db.prepare(`
+      SELECT id
+      FROM accounts
+      WHERE kind = 'PRIMARY'
+      LIMIT 1
+    `).get() as { id: string } | undefined
+
+    if (!primaryAccount) {
+      throw new Error('Primary account not found')
+    }
+
+    const timestamp = d2t({ dateTime: getNow({}) })
+    db.prepare(`
+      INSERT INTO ledger_entries (
+        id,
+        account_id,
+        amount,
+        type,
+        description,
+        posted_at,
+        effective_at,
+        related_item_id,
+        related_sub_item_id,
+        metadata_json
+      ) VALUES (?, ?, ?, 'WISH_REDEMPTION', ?, ?, ?, ?, ?, NULL)
+    `).run(
+      randomUUID(),
+      primaryAccount.id,
+      -Math.abs(tier.coin_cost),
+      `Redeemed reward: ${reward.name} - ${tier.name}`,
+      timestamp,
+      timestamp,
+      reward.id,
+      tier.id,
+    )
 
     return { success: true as const }
   })
@@ -334,6 +355,57 @@ export async function redeemRewardTier({
     coins: getCoins(),
     wishlist: getWishlist(),
   }
+}
+
+export async function openInvestmentAccount({
+  amount,
+  termWeeks,
+}: {
+  amount: number
+  termWeeks: number
+}) {
+  return createInvestmentAccount({
+    amount,
+    termWeeks: clampInvestmentTermWeeks(termWeeks),
+  })
+}
+
+export async function breakInvestment(accountId: string) {
+  return breakInvestmentAccount(accountId)
+}
+
+export async function getBreakPreview(accountId: string) {
+  const settings = getSettings()
+  const coins = getCoins()
+  const account = coins.accounts.find((a) => a.id === accountId)
+
+  if (!account || account.kind !== 'INVESTMENT_TERM' || account.status !== 'ACTIVE') {
+    return null
+  }
+
+  const principal = account.principalAmount ?? 0
+  const currentBalance = account.currentBalance
+  const forfeitedInterest = Math.max(0, currentBalance - principal)
+  const taxPenalty = account.startedAt
+    ? calculateBreakTaxPenalty({
+        principal,
+        startedAt: account.startedAt,
+        timezone: settings.system.timezone,
+        weekStartDay: settings.system.weekStartDay,
+      })
+    : 0
+
+  return {
+    principal,
+    forfeitedInterest,
+    taxPenalty,
+    totalLoss: forfeitedInterest + taxPenalty,
+    netReturned: Math.max(0, principal - taxPenalty),
+  }
+}
+
+export async function withdrawInvestment(accountId: string) {
+  return withdrawInvestmentAccount(accountId)
 }
 
 export async function uploadAvatar(formData: FormData): Promise<string> {

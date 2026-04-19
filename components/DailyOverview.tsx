@@ -56,7 +56,7 @@ const ItemSection = ({
   addNewItem,
 }: ItemSectionProps) => {
   const t = useTranslations('DailyOverview');
-  const { completeHabit, undoComplete, saveHabit, deleteHabit, habitFreqMap } = useHabits();
+  const { completeHabit, saveHabit, deleteHabit, habitFreqMap } = useHabits();
   const [browserSettings, setBrowserSettings] = useAtom(browserSettingsAtom);
   const [settings] = useAtom(settingsAtom);
   const [completedHabitsMap] = useAtom(completedHabitsMapAtom);
@@ -196,15 +196,13 @@ const ItemSection = ({
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              if (isCompleted) {
-                                undoComplete(habit);
-                              } else {
-                                if (quantityHabit) {
-                                  setQuantityHabitToLog(habit);
-                                } else {
-                                  completeHabit(habit);
-                                }
-                              }
+                               if (!isCompleted) {
+                                 if (quantityHabit) {
+                                   setQuantityHabitToLog(habit);
+                                 } else {
+                                   completeHabit(habit);
+                                 }
+                               }
                             }}
                             className="relative hover:opacity-70 transition-opacity w-4 h-4"
                           >
@@ -303,7 +301,7 @@ const ItemSection = ({
                     )}>
                       {quantityHabit
                         ? `${formatDecimal(habit.baseRate ?? 0)}/${habit.quantityUnit}`
-                        : habit.coinReward}
+                        : formatDecimal(habit.coinReward)}
                     </span>
                   </span>
                   {quantityHabit && (
@@ -531,7 +529,7 @@ export default function DailyOverview({
                                       ? "text-yellow-500 font-medium"
                                       : "text-gray-400"
                                   )}>
-                                    {tx('fromCoinsMessage', 'From {amount}', { amount: tierCost })}
+                                    {tx('fromCoinsMessage', 'From {amount}', { amount: formatDecimal(tierCost) })}
                                   </span>
                                 </span>
                               </div>
@@ -547,7 +545,7 @@ export default function DailyOverview({
                                   ? tx('rewardLimitReachedMessage', 'Redeemable again next reset')
                                   : redeemable
                                     ? t('readyToRedeemMessage')
-                                    : t('coinsToGoMessage', { amount: tierCost - coinBalance })}
+                                    : t('coinsToGoMessage', { amount: formatDecimal(tierCost - coinBalance) })}
                               </p>
                             </Link>
                           )

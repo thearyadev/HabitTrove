@@ -120,7 +120,7 @@ function StepperField({
         max={max}
         value={value}
         onChange={(event) => {
-          const nextValue = Number.parseInt(event.target.value, 10)
+          const nextValue = Number.parseFloat(event.target.value)
           onChange(Number.isNaN(nextValue) ? min : nextValue)
         }}
         className="h-11 border-0 text-center shadow-none [appearance:textfield] focus-visible:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"

@@ -19,8 +19,8 @@ export function getTodayInTimezone(timezone: string): string {
 }
 
 // round a number to the nearest integer
-export function roundToInteger(value: number): number {
-  return Math.round(value);
+export function roundToCurrency(value: number): number {
+  return Math.round(value * 100) / 100
 }
 
 export function formatDecimal(value: number): string {
@@ -183,7 +183,7 @@ export function calculateQuantityHabitCoins(habit: Habit, quantity: number): num
   const baseCoins = (quantity / baseUnit) * baseRate
   const coins = quantity > bonusThreshold ? baseCoins * scaleFactor : baseCoins
 
-  return roundToInteger(coins)
+  return roundToCurrency(coins)
 }
 
 export function getHabitRewardValue(habit: Habit): number {
@@ -220,55 +220,49 @@ export function getHabitProgress({
 }
 
 export function calculateCoinsEarnedToday(transactions: CoinTransaction[], timezone: string): number {
-  const today = getTodayInTimezone(timezone);
+  const today = getTodayInTimezone(timezone)
   return transactions
     .filter(transaction =>
       isSameDate(t2d({ timestamp: transaction.timestamp, timezone }),
         t2d({ timestamp: today, timezone })) &&
-      (transaction.amount > 0 || transaction.type === 'HABIT_UNDO')
+      transaction.amount > 0
     )
-    .reduce((sum, transaction) => sum + transaction.amount, 0);
+    .reduce((sum, transaction) => sum + transaction.amount, 0)
 }
 
 export function calculateTotalEarned(transactions: CoinTransaction[]): number {
   return transactions
-    .filter(transaction =>
-      transaction.amount > 0 || transaction.type === 'HABIT_UNDO'
-    )
-    .reduce((sum, transaction) => sum + transaction.amount, 0);
+    .filter(transaction => transaction.amount > 0)
+    .reduce((sum, transaction) => sum + transaction.amount, 0)
 }
 
 export function calculateTotalSpent(transactions: CoinTransaction[]): number {
   return Math.abs(
     transactions
-      .filter(transaction =>
-        transaction.amount < 0 &&
-        transaction.type !== 'HABIT_UNDO'
-      )
+      .filter(transaction => transaction.amount < 0)
       .reduce((sum, transaction) => sum + transaction.amount, 0)
-  );
+  )
 }
 
 export function calculateCoinsSpentToday(transactions: CoinTransaction[], timezone: string): number {
-  const today = getTodayInTimezone(timezone);
+  const today = getTodayInTimezone(timezone)
   return Math.abs(
     transactions
       .filter(transaction =>
         isSameDate(t2d({ timestamp: transaction.timestamp, timezone }),
           t2d({ timestamp: today, timezone })) &&
-        transaction.amount < 0 &&
-        transaction.type !== 'HABIT_UNDO'
+        transaction.amount < 0
       )
       .reduce((sum, transaction) => sum + transaction.amount, 0)
-  );
+  )
 }
 
 export function calculateTransactionsToday(transactions: CoinTransaction[], timezone: string): number {
-  const today = getTodayInTimezone(timezone);
+  const today = getTodayInTimezone(timezone)
   return transactions.filter(t =>
     isSameDate(t2d({ timestamp: t.timestamp, timezone }),
       t2d({ timestamp: today, timezone }))
-  ).length;
+  ).length
 }
 
 // Enhanced validation for weekly/monthly rules

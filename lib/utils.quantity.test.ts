@@ -46,7 +46,7 @@ describe('quantity habit utilities', () => {
     expect(calculateQuantityHabitCoins(quantityHabit, 20)).toBe(90)
   })
 
-  test('rounds quantity payouts to the nearest integer', () => {
+  test('preserves decimal precision in quantity payouts', () => {
     const walkingHabit: Habit = {
       ...quantityHabit,
       id: 'habit-2',
@@ -57,7 +57,7 @@ describe('quantity habit utilities', () => {
       scaleFactor: 1.5,
     }
 
-    expect(calculateQuantityHabitCoins(walkingHabit, 3)).toBe(2)
+    expect(calculateQuantityHabitCoins(walkingHabit, 3)).toBe(1.5)
   })
 
   test('returns completion records and totals for a given date', () => {

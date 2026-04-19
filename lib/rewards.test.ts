@@ -58,10 +58,14 @@ describe('reward utilities', () => {
       transactions: [
         {
           id: 'txn-1',
+          accountId: 'primary',
+          accountKind: 'PRIMARY',
+          accountName: 'Primary account',
           amount: -10,
           type: 'WISH_REDEMPTION',
           description: 'Redeemed reward: Pizza - Slice',
           timestamp: '2026-04-15T12:00:00.000Z',
+          effectiveAt: '2026-04-15T12:00:00.000Z',
           relatedItemId: 'reward-1',
           relatedSubItemId: 'tier-1',
         },
@@ -87,10 +91,14 @@ describe('reward utilities', () => {
       transactions: [
         {
           id: 'txn-1',
+          accountId: 'primary',
+          accountKind: 'PRIMARY',
+          accountName: 'Primary account',
           amount: -10,
           type: 'WISH_REDEMPTION',
           description: 'Redeemed reward: Pizza - Slice',
           timestamp: '2026-04-15T12:00:00.000Z',
+          effectiveAt: '2026-04-15T12:00:00.000Z',
           relatedItemId: 'reward-1',
           relatedSubItemId: 'tier-1',
         },

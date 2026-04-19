@@ -33,5 +33,5 @@ export function formatNumber({ amount, settings }: { amount: number, settings: S
     return formatWithLocale(amount / 1e3, useGrouping, 1) + 'K';
   }
 
-  return formatWithLocale(amount, useGrouping);
+  return formatWithLocale(amount, useGrouping, Number.isInteger(amount) ? 0 : 2);
 }

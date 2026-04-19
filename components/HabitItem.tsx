@@ -4,7 +4,7 @@ import { settingsAtom, browserSettingsAtom } from '@/lib/atoms'
 import { convertMachineReadableFrequencyToHumanReadable, formatDecimal, getCompletionsForToday, isQuantityHabit, isTaskOverdue } from '@/lib/utils'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Coins, Edit, Check, Undo2, MoreVertical, Pin } from 'lucide-react'
+import { Coins, Edit, Check, MoreVertical, Pin } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,7 +23,7 @@ interface HabitItemProps {
 }
 
 export default function HabitItem({ habit, onEdit, onDelete }: HabitItemProps) {
-  const { completeHabit, undoComplete } = useHabits()
+  const { completeHabit } = useHabits()
   const [settings] = useAtom(settingsAtom)
   const completionsToday = getCompletionsForToday({ habit, timezone: settings.system.timezone })
   const target = habit.targetCompletions || 1
@@ -107,7 +107,7 @@ export default function HabitItem({ habit, onEdit, onDelete }: HabitItemProps) {
                       baseRate: formatDecimal(habit.baseRate ?? 0),
                       unit: habit.quantityUnit ?? '',
                     })
-                    : t('coinsPerCompletion', { count: habit.coinReward })}
+                    : t('coinsPerCompletion', { count: formatDecimal(habit.coinReward) })}
                 </span>
               </div>
               {quantityHabit && (
@@ -171,18 +171,6 @@ export default function HabitItem({ habit, onEdit, onDelete }: HabitItemProps) {
                 )}
               </Button>
             </div>
-            {completionsToday > 0 && !habit.archived && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={async () => await undoComplete(habit)}
-                disabled={!canWrite}
-                className="w-10 sm:w-auto"
-              >
-                <Undo2 className="h-4 w-4" />
-                <span className="hidden sm:inline ml-2">{t('undoButton')}</span>
-              </Button>
-            )}
           </div>
           <div className="flex gap-2">
             {!habit.archived && (
